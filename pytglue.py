@@ -166,10 +166,7 @@ class pytglue:
             raise RuntimeError(error)
 
     def Get(self):
-        self.rawdata={'data': [{'id': '4280971', 'type': 'flexible-assets', 'attributes': {'organization-id': 199740, 'organization-name': 'RMON Networks', 'resource-url': 'https://rmonnetworks.itglue.com/199740/assets/109937-zabbix-proxy/records/4280971', 'restricted': False, 'my-glue': False, 'flexible-asset-type-id': 109937, 'flexible-asset-type-name': 'Zabbix Proxy', 'name': 'zabbix-poller-test', 'traits': {'proxy-hostname': 'zabbix-poller-test', 'zabbix-proxy-id': '11591', 'monitored-devices': {'type': 'Configurations', 'values': [{'id': 1057602, 'name': 'RMON-Switch2-POE', 'hostname': 'RMON-SW2-POE', 'organization-name': 'RMON Networks', 'configuration-type-name': 'Switch', 'resource-url': 'https://rmonnetworks.itglue.com/199740/configurations/1057602'}, {'id': 1057599, 'name': 'RMON-Switch1-POE', 'hostname': 'RMON-SW1-POE', 'organization-name': 'RMON Networks', 'configuration-type-name': 'Switch', 'resource-url': 'https://rmonnetworks.itglue.com/199740/configurations/1057599'}]}}, 'created-at': '2018-11-29T15:29:00.000Z', 'updated-at': '2018-11-30T15:21:43.000Z'}, 'relationships': {}}], 'meta': {'current-page': 1, 'next-page': None, 'prev-page': None, 'total-pages': 1, 'total-count': 1, 'filters': {}}, 'links': {}}
-        self.FlexibleAsset.appendData(self.rawdata)
 
-        """
         if self.query=='':
             self.query=None
         if self.queryType=='Configuration':
@@ -184,7 +181,7 @@ class pytglue:
         if self.queryType=='Contact':
             self.rawdata=self.getRequest(urlDict[self.queryType],self.query)
             self.Contacts.appendData(self.rawdata)
-        """
+
     def Connect(self, apikey):
         self.getheader={'x-api-key': apikey}
         self.postheader={'x-api-key': apikey, 'Content-Type':'application/vnd.api+json'}
