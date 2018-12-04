@@ -103,10 +103,11 @@ class pytglue:
     def __init__(self):
         self.self=self
         #self.Configurations=self.Configurations(self.parseData, self.loadData, self.appendData, self.Select, self.SelectNext, self.Print, self.PrintAll)
-        self.Configurations=self.Configurations(self.loadData, self.append)
+        self.Configurations=self.Configurations(self.loadData, self.append, self.convertToID, self.patchRequest)
         self.FlexibleAsset=self.FlexibleAsset(self.loadData, self.append)
         self.Organizations=self.Organizations(self.loadData, self.append)
         self.Contacts=self.Contacts(self.loadData, self.append)
+        self.updates=[]
 
     def makeQuery(self, query, param=None, param_value=None, final=False):
         if param_value != None:
@@ -153,6 +154,17 @@ class pytglue:
                 "\nRequest Query: ", query)
                 raise RuntimeError(error)
 
+    def patchRequest(self, url, query=None):
+        query=json.dumps(query)
+        response=requests.patch(url, data=query, headers=self.postheader)
+        if response.status_code < 199 or response.status_code < 299:
+            response=json.loads(response.text)
+        else:
+            error=("Status Code: ", response.status_code, "\nResponse Text: ",
+            response.text, "\nRequest URL: ", url, "\nRequest Header: ", self.postheader,
+            "\nRequest Query: ", query)
+            raise RuntimeError(error)
+
     def Get(self):
         if self.query=='':
             self.query=None
@@ -168,8 +180,6 @@ class pytglue:
         if self.queryType=='Contact':
             self.rawdata=self.getRequest(urlDict[self.queryType],self.query)
             self.Contacts.appendData(self.rawdata)
-
-
 
     def Connect(self, apikey):
         self.getheader={'x-api-key': apikey}
@@ -276,7 +286,6 @@ class pytglue:
             'important', 'primaryEmail']
             self.canConvert=['org','contactType']
             self.IncludeList=['location', 'password']
-
         ##Add in other items
 
     def Filter(self, **kwargs):
@@ -370,7 +379,7 @@ class pytglue:
 ##Add Clear function
 
     class Configurations:
-        def __init__(self, loadData, append):
+        def __init__(self, loadData, append, convertToID, patchRequest):
 
 
             self.self=self
@@ -378,6 +387,9 @@ class pytglue:
             self.counter=0
             self.loadData=loadData
             self.append=append
+            self.convertToID=convertToID
+            self.updates=[]
+            self.patchRequest=patchRequest
 
         def appendData(self, newdata):
             self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
@@ -386,7 +398,47 @@ class pytglue:
             except KeyError:
                 pass
         def Select(self):
+            editable=['organization-id', 'configuration-type-id', 'configuration-status-id',
+            'location-id', 'contact-id', 'manufacturer-id', 'model-id', 'operating-system-id',
+            'operating-system-notes', 'name', 'notes', 'hostname', 'primary-ip', 'mac-address',
+            'default-gateway', 'serial-number', 'asset-tag', 'position', 'installed-by',
+            'purchased-by', 'purchased-at', 'warranty-expires-at', 'installed-at']
+            canconvert=['organization-name', 'configuration-type-name', 'configuration-status-name',
+            'manufacturer-name', 'model-name']
+            self.update={}
+            update=False
+            try:
+                for x in editable:
+                    if self.item[x]!=self.control[x]:
+                        self.update[x]=self.item[x]
+                        update=True
+                for x in canconvert:
+                    if self.item[x]!=self.control[x]:
+                        if x=='organization-name':
+                            organization_id=self.convertToID('org', self.item[x])
+                            self.update['organization-id']=organization_id
+                        elif x=='configuration-type-name':
+                            configuration_type_id=self.convertToID('configType', self.item[x])
+                            self.update['configuration-type-id']=configuration_type_id
+                        elif x=='configuration-status-name':
+                            configuration_status_id=self.convertToID('configStatus', self.item[x])
+                            self.update['configuration-status-id']=configuration_status_id
+                        """
+                        elif x=='manufacturer-name':
+                            manufacturer_name=self.convertToID('configStatus', x)
+                        elif x=='model-name':
+                        """
+                        update=True
+            except AttributeError:
+                pass
+
+            if update:
+                self.update['id']=self.item['id']
+                self.update['type']=self.item['type']
+                self.updates.append(self.update)
             self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            self.control=dict(self.item)
+
         def SelectNext(self):
             self.counter=self.counter+1
             try:
@@ -408,6 +460,34 @@ class pytglue:
                 self.SelectNext()
             self.counter=counterholder
             self.Select()
+
+        ##This module is from stackoverflow... https://stackoverflow.com/questions/22663966/changing-order-of-ordered-dictionary-in-python
+        def move_element(self, odict, thekey, newpos):
+            odict[thekey] = odict.pop(thekey)
+            i = 0
+            for key, value in odict.items():
+                if key != thekey and i >= newpos:
+                    odict[key] = odict.pop(key)
+                i += 1
+            return odict
+
+        def Update(self):
+            self.Select()
+            update={"data":[]}
+            for x in self.updates:
+                updatequeue={}
+                updatequeue["type"]=x.pop("type")
+                #updatequeue["id"]=x.pop("id")
+                updatequeue["attributes"]={}
+                for y in x:
+                    updatequeue["attributes"][y]=x[y]
+                #updatequeue["attributes"]=self.move_element(updatequeue["attributes"], "id", 0)
+                update["data"].append(updatequeue)
+
+            self.testupdate=update
+
+            self.patchRequest(urlDict['Configuration'], update)
+
 
     class FlexibleAsset:
         def __init__(self, loadData, append):
