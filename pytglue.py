@@ -103,8 +103,8 @@ class pytglue:
     def __init__(self):
         self.self=self
         #self.Configurations=self.Configurations(self.parseData, self.loadData, self.appendData, self.Select, self.SelectNext, self.Print, self.PrintAll)
-        self.Configurations=self.Configurations(self.loadData, self.append, self.convertToID, self.patchRequest)
-        self.FlexibleAsset=self.FlexibleAsset(self.loadData, self.append)
+        self.Configurations=self.Configurations(self.loadData, self.append, self.convertToID, self.patchRequest, self.format_update)
+        self.FlexibleAsset=self.FlexibleAsset(self.loadData, self.append, self.convertToID, self.patchRequest)
         self.Organizations=self.Organizations(self.loadData, self.append)
         self.Contacts=self.Contacts(self.loadData, self.append)
         self.updates=[]
@@ -166,6 +166,10 @@ class pytglue:
             raise RuntimeError(error)
 
     def Get(self):
+        self.rawdata={'data': [{'id': '4280971', 'type': 'flexible-assets', 'attributes': {'organization-id': 199740, 'organization-name': 'RMON Networks', 'resource-url': 'https://rmonnetworks.itglue.com/199740/assets/109937-zabbix-proxy/records/4280971', 'restricted': False, 'my-glue': False, 'flexible-asset-type-id': 109937, 'flexible-asset-type-name': 'Zabbix Proxy', 'name': 'zabbix-poller-test', 'traits': {'proxy-hostname': 'zabbix-poller-test', 'zabbix-proxy-id': '11591', 'monitored-devices': {'type': 'Configurations', 'values': [{'id': 1057602, 'name': 'RMON-Switch2-POE', 'hostname': 'RMON-SW2-POE', 'organization-name': 'RMON Networks', 'configuration-type-name': 'Switch', 'resource-url': 'https://rmonnetworks.itglue.com/199740/configurations/1057602'}, {'id': 1057599, 'name': 'RMON-Switch1-POE', 'hostname': 'RMON-SW1-POE', 'organization-name': 'RMON Networks', 'configuration-type-name': 'Switch', 'resource-url': 'https://rmonnetworks.itglue.com/199740/configurations/1057599'}]}}, 'created-at': '2018-11-29T15:29:00.000Z', 'updated-at': '2018-11-30T15:21:43.000Z'}, 'relationships': {}}], 'meta': {'current-page': 1, 'next-page': None, 'prev-page': None, 'total-pages': 1, 'total-count': 1, 'filters': {}}, 'links': {}}
+        self.FlexibleAsset.appendData(self.rawdata)
+
+        """
         if self.query=='':
             self.query=None
         if self.queryType=='Configuration':
@@ -180,7 +184,7 @@ class pytglue:
         if self.queryType=='Contact':
             self.rawdata=self.getRequest(urlDict[self.queryType],self.query)
             self.Contacts.appendData(self.rawdata)
-
+        """
     def Connect(self, apikey):
         self.getheader={'x-api-key': apikey}
         self.postheader={'x-api-key': apikey, 'Content-Type':'application/vnd.api+json'}
@@ -376,11 +380,20 @@ class pytglue:
         for key_1 in singledata:
             result=loop(result, key_1, singledata, alldata)
         return result
+
+    ## Called by "Update" in individual classes
+    def format_update(self, updates, url):
+        update={"data":[]}
+        for x in updates:
+            updatequeue={"type":x.pop("type"), "attributes": {}}
+            for y in x:
+                updatequeue["attributes"][y]=x[y]
+            update["data"].append(updatequeue)
+        self.patchRequest(url, update)
 ##Add Clear function
 
     class Configurations:
-        def __init__(self, loadData, append, convertToID, patchRequest):
-
+        def __init__(self, loadData, append, convertToID, patchRequest,format_update):
 
             self.self=self
             self.rawdata={'data':[], 'included':[]}
@@ -390,6 +403,7 @@ class pytglue:
             self.convertToID=convertToID
             self.updates=[]
             self.patchRequest=patchRequest
+            self.format_update=format_update
 
         def appendData(self, newdata):
             self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
@@ -433,8 +447,8 @@ class pytglue:
                 pass
 
             if update:
-                self.update['id']=self.item['id']
-                self.update['type']=self.item['type']
+                self.update['id']=self.control['id']
+                self.update['type']=self.control['type']
                 self.updates.append(self.update)
             self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
             self.control=dict(self.item)
@@ -461,41 +475,20 @@ class pytglue:
             self.counter=counterholder
             self.Select()
 
-        ##This module is from stackoverflow... https://stackoverflow.com/questions/22663966/changing-order-of-ordered-dictionary-in-python
-        def move_element(self, odict, thekey, newpos):
-            odict[thekey] = odict.pop(thekey)
-            i = 0
-            for key, value in odict.items():
-                if key != thekey and i >= newpos:
-                    odict[key] = odict.pop(key)
-                i += 1
-            return odict
-
         def Update(self):
             self.Select()
-            update={"data":[]}
-            for x in self.updates:
-                updatequeue={}
-                updatequeue["type"]=x.pop("type")
-                #updatequeue["id"]=x.pop("id")
-                updatequeue["attributes"]={}
-                for y in x:
-                    updatequeue["attributes"][y]=x[y]
-                #updatequeue["attributes"]=self.move_element(updatequeue["attributes"], "id", 0)
-                update["data"].append(updatequeue)
-
-            self.testupdate=update
-
-            self.patchRequest(urlDict['Configuration'], update)
-
+            self.format_update(self.updates, urlDict['Configuration'])
 
     class FlexibleAsset:
-        def __init__(self, loadData, append):
+        def __init__(self, loadData, append, convertToID, patchRequest):
             self.self=self
             self.rawdata={'data':[], 'included':[]}
             self.counter=0
             self.loadData=loadData
             self.append=append
+            self.convertToID=convertToID
+            self.updates=[]
+            self.patchRequest=patchRequest
 
         def appendData(self, newdata):
             self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
@@ -504,7 +497,58 @@ class pytglue:
             except KeyError:
                 pass
         def Select(self):
+            noneditable=['id', 'name', 'type', 'resource-url', 'restricted', 'my-glue',
+            'flexible-asset-type-id', 'flexible-asset-type-name', 'created-at',
+            'updated-at']
+
+            #There is no canconvert list because the only item that can be converted is the
+            #Organization Name
+            self.update={}
+            update=False
+            try:
+                for x in self.item:
+                    if x not in noneditable:
+                        if self.item[x] != self.control[x]:
+                            update=True
+                            if x=='organization-name':
+                                organization_id=self.convertToID('org', self.item[x])
+                                self.update['organization-id']=organization_id
+                            elif isinstance(self.control[x], dict):
+                                if isinstance(self.item[x], list):
+                                    self.update[x]=self.item[x]
+                                else:
+                                    error=("Tagged Items in Flexible Assets must be updated as a list of ITGlue IDs")
+                                    raise RuntimeError(error)
+                            else:
+                                self.update[x] = self.item[x]
+
+            except AttributeError:
+                pass
+
+            if update:
+                self.update['id']=self.control['id']
+                self.update['type']=self.control['type']
+                updatekeys=list(self.update.keys())
+                itemkeys=list(self.item.keys())
+                for x in list(itemkeys):
+                    if x in noneditable:
+                        itemkeys.remove(x)
+                    elif x in updatekeys:
+                        itemkeys.remove(x)
+                for x in itemkeys:
+                    if isinstance(self.control[x], dict):
+                        idlist=[]
+                        for y in self.control[x]['values']:
+                            idlist.append(y['id'])
+                        self.update[x]=idlist
+                    else:
+                        self.update[x]=self.control[x]
+                self.update.pop('organization-name')
+                self.updates.append(self.update)
+
             self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            self.control=dict(self.item)
+
         def SelectNext(self):
             self.counter=self.counter+1
             try:
@@ -512,6 +556,9 @@ class pytglue:
             except IndexError:
                 self.counter=0
                 self.Select()
+            except AttributeError:
+                pass
+
         def Print(self):
             for x in self.item:
                 print(x,": ", self.item[x])
@@ -521,12 +568,29 @@ class pytglue:
             self.Select()
             for x in self.rawdata['data']:
                 self.Print()
-                print('')
-                print('')
-                print('')
+                print('\n\n\n')
                 self.SelectNext()
             self.counter=counterholder
             self.Select()
+
+        def Update(self):
+            url=urlDict['Flexible Asset']
+            self.Select()
+            update={"data":[]}
+            for x in self.updates:
+                updatequeue={"type":x.pop("type"), "attributes": {"id": x.pop("id"),"organization-id":x.pop("organization-id"), "traits":{}}}
+                for y in x:
+                    updatequeue["attributes"]["traits"][y]=x[y]
+                if len(self.updates)==1:
+                    id=updatequeue["attributes"].pop("id")
+                    url=url+"/"+id
+                    update["data"]=updatequeue
+                else:
+                    update["data"].append(updatequeue)
+            self.updatetest=update
+            self.updates=[]
+
+            self.patchRequest(url, update)
 ## There is something wrong with the Contacts query with org ids. the query gives
 ## 'filter[organization_id]=' but it needs to be 'organization_id=' for contacts
     class Contacts:
