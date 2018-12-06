@@ -2,8 +2,6 @@ import requests
 import json
 import types
 
-# Add Returns for all SelectNext
-# Add Search for all items
 
 urlDict = {
     'configurations': 'https://api.itglue.com/configurations',
@@ -243,8 +241,8 @@ class pytglue:
                 for key in self.idlist['manufacturers']:
                     self.idlist['models'][key] = {}
                 for x in response['data']:
-                    key =x ['attributes']['manufacturer-name']
-                    if key == None:
+                    key = x['attributes']['manufacturer-name']
+                    if key is None:
                         key = 'None'
                     subkey = x['attributes']['name']
                     value = x['id']
@@ -368,7 +366,7 @@ class pytglue:
 
     def append(self, newdata, existingdata):
         for x in newdata:
-            if existingdata == None:
+            if existingdata is None:
                 existingdata.append(x)
             else:
                 if x in existingdata:
@@ -496,6 +494,44 @@ class pytglue:
             if end is True:
                 print("No Value Found")
 
+    def common_select(self, subclass, editable, canconvert):
+        changes = {}
+        update = False
+        try:
+            for x in editable:
+                if subclass.item[x] != subclass.control[x]:
+                    changes[x] = subclass.item[x]
+                    update = True
+            for x in canconvert:
+                if subclass.item[x] != subclass.control[x]:
+                    converted = subclass.convertToID(x, subclass.item[x])
+                    if x == 'organization-name':
+                        changes['organization-id'] = converted
+                    elif x == 'configuration-type-name':
+                        changes['configuration-type-id'] = converted
+                    elif x == 'configuration-status-name':
+                        changes['configuration-status-id'] = converted
+                    elif x == 'organization-type-name':
+                        changes['organization-type-id'] = converted
+                    elif x == 'organization-status-name':
+                        changes['organization-status-id'] = converted
+                    """
+                    elif x=='manufacturer-name':
+                        manufacturer_name=self.convertToID('configStatus', x)
+                    elif x=='model-name':
+                    """
+                    update = True
+        except (AttributeError, TypeError):
+            pass
+
+        if update:
+            changes['id'] = subclass.control['id']
+            changes['type'] = subclass.control['type']
+            subclass.updates.append(changes)
+        subclass.item = subclass.loadData(subclass.rawdata['data'][subclass.counter], subclass.rawdata)
+        subclass.control = dict(subclass.item)
+
+
     class Create:
         def __init__(
                 self, subclass, create_items, create_required, create_convert,
@@ -509,16 +545,10 @@ class pytglue:
             self.convertToID = convertToID
             self.Post = Post
 
-
         def Next(self):
             self.requirement_check()
             self.create_list.append(self.item)
             self.item = dict(self.new_create)
-
-
-
-
-
 
         def requirement_check(self):
             for x in self.create_convert:
@@ -535,9 +565,6 @@ class pytglue:
             if missing:
                 error = "Missing Required Field: "+key
                 raise RuntimeError(error)
-
-# Add Clear function
-
 
     class Configurations:
         def __init__(self, loadData, append, convertToID, patchRequest,
@@ -560,6 +587,7 @@ class pytglue:
             self.common_print_all = common_print_all
             self.common_append_data = common_append_data
             self.postRequest = postRequest
+            self.common_select = common_select
             create_items = {
                 'organization-id': None, 'organization-name': None,
                 'configuration-type-id': None, 'configuration-type-name': None,
@@ -622,39 +650,8 @@ class pytglue:
             canconvert = [
                 'organization-name', 'configuration-type-name',
                 'configuration-status-name', 'manufacturer-name', 'model-name']
-            self.update = {}
-            update = False
-            try:
-                for x in editable:
-                    if self.item[x] != self.control[x]:
-                        self.update[x] = self.item[x]
-                        update = True
-                for x in canconvert:
-                    if self.item[x] != self.control[x]:
-                        if x == 'organization-name':
-                            organization_id = self.convertToID('org', self.item[x])
-                            self.update['organization-id'] = organization_id
-                        elif x == 'configuration-type-name':
-                            configuration_type_id = self.convertToID('configType', self.item[x])
-                            self.update['configuration-type-id'] = configuration_type_id
-                        elif x == 'configuration-status-name':
-                            configuration_status_id = self.convertToID('configStatus', self.item[x])
-                            self.update['configuration-status-id'] = configuration_status_id
-                        """
-                        elif x=='manufacturer-name':
-                            manufacturer_name=self.convertToID('configStatus', x)
-                        elif x=='model-name':
-                        """
-                        update = True
-            except (AttributeError, TypeError):
-                pass
 
-            if update:
-                self.update['id'] = self.control['id']
-                self.update['type'] = self.control['type']
-                self.updates.append(self.update)
-            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
-            self.control = dict(self.item)
+            self.common_select(self, editable, canconvert)
 
         def Post(self):
             self.Create.Next()
@@ -721,7 +718,6 @@ class pytglue:
                 for y in dict(configuration["attributes"]):
                     if configuration["attributes"][y] is None:
                         configuration["attributes"].pop(y)
-
 
                 if config_interface_items != []:
                     configuration["relationships"] = {"configuration_interfaces": {"data": config_interface_items}}
@@ -846,7 +842,7 @@ class pytglue:
         def __init__(self, loadData, append, convertToID, patchRequest,
                      format_update, common_print, common_select_next,
                      common_clear, common_print_all, common_append_data,
-                     common_search):
+                     common_search, common_select):
 
             self.self = self
             self.rawdata = {'data': [], 'included': []}
@@ -863,6 +859,7 @@ class pytglue:
             self.common_print_all = common_print_all
             self.common_append_data = common_append_data
             self.common_search = common_search
+            self.common_select = common_select
 
         def appendData(self, newdata):
             self.common_append_data(self, newdata)
@@ -882,14 +879,22 @@ class pytglue:
         def SelectNext(self):
             self.common_select_next(self)
 
+        # Need to add support for editing email/phone numbers
         def Select(self):
-            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            editable = [
+                'organization-id', 'contact-type-id', 'location-id',
+                'first-name', 'last-name', 'title', 'important', 'notes'
+                ]
+            canconvert = [
+                'organization-name', 'contact-type-name']
+
+            self.common_select(self, editable, canconvert)
 
     class Organizations:
         def __init__(self, loadData, append, convertToID, patchRequest,
                      format_update, common_print, common_select_next,
                      common_clear, common_print_all, common_append_data,
-                     common_search):
+                     common_search, common_select):
 
             self.self = self
             self.rawdata = {'data': [], 'included': []}
@@ -906,6 +911,7 @@ class pytglue:
             self.common_print_all = common_print_all
             self.common_append_data = common_append_data
             self.common_search = common_search
+            self.common_select = common_search
 
         def appendData(self, newdata):
             self.common_append_data(self, newdata)
@@ -926,4 +932,11 @@ class pytglue:
             self.common_select_next(self)
 
         def Select(self):
-            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            editable = [
+                'name', 'alert', 'description', 'organization-type-id',
+                'organization-status-id', 'quick-notes', 'quick-notes',
+                'short-name']
+            canconvert = [
+                'organization-type-name', 'organization-status-name']
+
+            self.common_select(self, editable, canconvert)
