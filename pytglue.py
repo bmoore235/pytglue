@@ -106,11 +106,30 @@ pageDict = {
 class pytglue:
     def __init__(self):
         self.self = self
-        # self.Configurations=self.Configurations(self.parseData, self.loadData, self.appendData, self.Select, self.SelectNext, self.Print, self.PrintAll)
-        self.Configurations = self.Configurations(self.loadData, self.append, self.convertToID, self.patchRequest, self.format_update)
-        self.FlexibleAsset = self.FlexibleAsset(self.loadData, self.append, self.convertToID, self.patchRequest)
-        self.Organizations = self.Organizations(self.loadData, self.append)
-        self.Contacts = self.Contacts(self.loadData, self.append)
+
+        self.Configurations = self.Configurations(
+            self.loadData, self.append, self.convertToID, self.patchRequest,
+            self.format_update, self.common_print, self.common_select_next,
+            self.common_clear, self.common_print_all, self.common_append_data,
+            self.common_search, self.Create, self.postRequest)
+
+        self.FlexibleAsset = self.FlexibleAsset(
+            self.loadData, self.append, self.convertToID, self.patchRequest,
+            self.common_print, self.common_select_next, self.common_clear,
+            self.common_print_all, self.common_append_data, self.common_search)
+
+        self.Contacts = self.Contacts(
+            self.loadData, self.append, self.convertToID, self.patchRequest,
+            self.format_update, self.common_print, self.common_select_next,
+            self.common_clear, self.common_print_all, self.common_append_data,
+            self.common_search)
+
+        self.Organizations = self.Organizations(
+            self.loadData, self.append, self.convertToID, self.patchRequest,
+            self.format_update, self.common_print, self.common_select_next,
+            self.common_clear, self.common_print_all, self.common_append_data,
+            self.common_search)
+
         self.updates = []
 
     def makeQuery(self, query, param=None, param_value=None, final=False):
@@ -134,7 +153,7 @@ class pytglue:
             response = requests.get(url, params=query, headers=self.getheader)
             if response.status_code < 199 or response.status_code < 299:
                 response = json.loads(response.text)
-                if return_all == False:
+                if not return_all:
                     return response
                 else:
                     try:
@@ -159,7 +178,7 @@ class pytglue:
                          "\nRequest Query: ", query)
                 raise RuntimeError(error)
 
-    def patchRequest(self, url, query=None):
+    def patchRequest(self, url, query):
         query = json.dumps(query)
         response = requests.patch(url, data=query, headers=self.postheader)
         if response.status_code < 199 or response.status_code < 299:
@@ -170,6 +189,16 @@ class pytglue:
                      self.postheader, "\nRequest Query: ", query)
             raise RuntimeError(error)
 
+    def postRequest(self, url, query):
+        data = json.dumps(query)
+        response = requests.post(url, data=data, headers=self.postheader)
+        if response.status_code < 199 or response.status_code < 299:
+            response = json.loads(response.text)
+        else:
+            error = ("Status Code: ", response.status_code, "\nResponse Text: ",
+                     response.text, "\nRequest URL: ", url, "\nRequest Header: ",
+                     self.postheader, "\nRequest Query: ", query)
+            raise RuntimeError(error)
     def Get(self):
         if self.query == '':
             self.query = None
@@ -185,6 +214,7 @@ class pytglue:
         if self.queryType == 'Contact':
             self.rawdata = self.getRequest(urlDict[self.queryType], self.query)
             self.Contacts.appendData(self.rawdata)
+
 
     def Connect(self, apikey):
         self.getheader = {'x-api-key': apikey}
@@ -244,26 +274,29 @@ class pytglue:
             raise RuntimeError(error)
 
     def convertToID(self, key, value):
+        organization_aliases = ['org', 'organization-name']
+        configType_aliases = ['configType', 'configuration-type-name']
+        configStatus_aliases = ['configStatus', 'configuration-status-name']
+        flexibleAssetType_aliases = ['flexibleAssetType']
+        orgType_aliases = ['orgType', 'excludeOrgType']
+        orgStatus_aliases = ['orgStatus', 'excludeOrgStatus']
+        contactType_aliases = ['contactType']
 
         try:
-            if key == 'org':
-                value = self.idlist['organizations'][value]
-            elif key == 'configType':
-                value = self.idlist['configuration_types'][value]
-            elif key == 'configStatus':
-                value = self.idlist['configuration_statuses'][value]
-            elif key == 'flexibleAssetType':
-                value = self.idlist['flexible_asset_types'][value]
-            elif key == 'orgType':
-                value = self.idlist['organization_types'][value]
-            elif key == 'orgStatus':
-                value = self.idlist['organization_statuses'][value]
-            elif key == 'excludeOrgType':
-                value = self.idlist['organization_types'][value]
-            elif key == 'excludeOrgStatus':
-                value = self.idlist['organization_statuses'][value]
-            elif key == 'contactType':
-                value = self.idlist['contact_types'][value]
+            if key in organization_aliases:
+                value = int(self.idlist['organizations'][value])
+            elif key in configType_aliases:
+                value = int(self.idlist['configuration_types'][value])
+            elif key in configStatus_aliases:
+                value = int(self.idlist['configuration_statuses'][value])
+            elif key in flexibleAssetType_aliases:
+                value = int(self.idlist['flexible_asset_types'][value])
+            elif key in orgType_aliases:
+                value = int(self.idlist['organization_types'][value])
+            elif key in orgStatus_aliases:
+                value = int(self.idlist['organization_statuses'][value])
+            elif key in contactType_aliases:
+                value = int(self.idlist['contact_types'][value])
             return value
         except KeyError:
             error = "Invalid "+key+" choice: " + value
@@ -399,18 +432,118 @@ class pytglue:
 
     # Called by "Update" in individual classes except for Flexible Asset
 
-    def format_update(self, updates, url):
+    def format_update(self, subclass, url):
+        subclass.Select()
         update = {"data": []}
-        for x in updates:
+        for x in subclass.updates:
             updatequeue = {"type": x.pop("type"), "attributes": {}}
             for y in x:
                 updatequeue["attributes"][y] = x[y]
             update["data"].append(updatequeue)
         self.patchRequest(url, update)
+
+    def common_print(self, subclass):
+        for x in subclass.item:
+            print(x, ": ", subclass.item[x])
+
+    def common_select_next(self, subclass):
+        subclass.counter = subclass.counter+1
+        try:
+            subclass.Select()
+            return False
+        except IndexError:
+            subclass.counter = 0
+            subclass.Select()
+            return True
+
+    def common_clear(self, subclass):
+        subclass.rawdata = {'data': [], 'included': []}
+        subclass.counter = 0
+        subclass.updates = []
+
+    def common_print_all(self, subclass):
+        counterholder = subclass.counter
+        subclass.counter = 0
+        subclass.Select()
+        for x in subclass.rawdata['data']:
+            subclass.Print()
+            print('')
+            subclass.SelectNext()
+        subclass.counter = counterholder
+        subclass.Select()
+
+    def common_append_data(self, subclass, newdata):
+        subclass.rawdata['data'] = subclass.append(newdata['data'], subclass.rawdata['data'])
+        try:
+            subclass.rawdata['included'] = subclass.append(newdata['included'], subclass.rawdata['included'])
+        except KeyError:
+            pass
+        subclass.Select()
+
+    def common_search(self, subclass, **kwargs):
+        # Will only return value of last kwarg
+        # Can search on any key, but will only return the first value.
+        subclass.counter = 0
+        subclass.Select()
+        for key in kwargs:
+            value = kwargs[key]
+            end = False
+            while not end:
+                if subclass.item[key] == value:
+                    break
+                else:
+                    end = subclass.SelectNext()
+            if end is True:
+                print("No Value Found")
+
+    class Create:
+        def __init__(
+                self, subclass, create_items, create_required, create_convert,
+                convertToID, Post):
+            self.self = subclass
+            self.new_create = create_items
+            self.item = dict(self.new_create)
+            self.required = create_required
+            self.create_list = []
+            self.create_convert = create_convert
+            self.convertToID = convertToID
+            self.Post = Post
+
+
+        def Next(self):
+            self.requirement_check()
+            self.create_list.append(self.item)
+            self.item = dict(self.new_create)
+
+
+
+
+
+
+        def requirement_check(self):
+            for x in self.create_convert:
+                if self.item[x] is not None:
+                    id = self.convertToID(x, self.item[x])
+                    self.item[self.create_convert[x]] = id
+            missing = False
+            missing_fields = []
+            for x in self.required:
+                if self.item[x] is None:
+                    missing_fields.append(x)
+                    missing = True
+
+            if missing:
+                error = "Missing Required Field: "+key
+                raise RuntimeError(error)
+
 # Add Clear function
 
+
     class Configurations:
-        def __init__(self, loadData, append, convertToID, patchRequest,format_update):
+        def __init__(self, loadData, append, convertToID, patchRequest,
+                     format_update, common_print, common_select_next,
+                     common_clear, common_print_all, common_append_data,
+                     common_search, Create, postRequest):
 
             self.self = self
             self.rawdata = {'data': [], 'included': []}
@@ -421,140 +554,240 @@ class pytglue:
             self.updates = []
             self.patchRequest = patchRequest
             self.format_update = format_update
+            self.common_print = common_print
+            self.common_select_next = common_select_next
+            self.common_clear = common_clear
+            self.common_print_all = common_print_all
+            self.common_append_data = common_append_data
+            self.postRequest = postRequest
+            create_items = {
+                'organization-id': None, 'organization-name': None,
+                'configuration-type-id': None, 'configuration-type-name': None,
+                'configuration-status-id': None,
+                'configuration-status-name': None, 'location-id': None,
+                'contact-id': None, 'manufacturer-id': None, 'model-id': None,
+                'operating-system-id': None, 'operating-system-notes': None,
+                'name': None, 'notes': None, 'hostname': None,
+                'primary-ip': None, 'mac-address': None, 'serial-number': None,
+                'default-gateway': None, 'asset-tag': None, 'position': None,
+                'installed-by': None, 'purchased-by': None,
+                'purchased-at': None, 'warranty-expires-at': None,
+                'installed-at': None, 'configuration-interfaces-name': None,
+                'configuration-interfaces-ip-address': None,
+                'configuration-interfaces-primary': None,
+                'configuration-interfaces-notes': None, "type": "configurataions",
+                "configuration_interfaces": "configuration-interfaces"
+                }
+            create_required = ['organization-id', 'configuration-type-id', 'name']
+            create_convert = {
+                'organization-name': 'organization-id',
+                'configuration-type-name': 'configuration-type-id',
+                'configuration-status-name': 'configuration-status-id'
+            }
 
-        class Create:
-            def __init__(self):
-                self.item = {'organization-id':None, 'configuration-status-id':None, 'location-id':None,
-                'contact-id':None, 'manufacturer-id':None, 'model-id':None, 'operating-system-id':None,
-                'operating-systems-notes':None, 'name':None, 'notes':None, 'hostname':None, 'primary-ip':None,
-                'mac-address':None, 'default-gateway':None, 'serial-number':None, 'asset-tag':None,
-                'position':None, 'installed-by':None, 'purchased-by':None, 'purchased-at':None,
-                'warranty-expires-at':None, 'inastalled-at':None, 'configuration-interfaces-name':None,
-                'configuration-interfaces-ip-address':None, 'configuration-interfaces-primary':None,
-                'configuration-interfaces-notes':None}
-
-
+            self.Create = Create(
+                self, create_items, create_required, create_convert,
+                self.convertToID, self.Post)
 
         def appendData(self, newdata):
-            self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
-            try:
-                self.rawdata['included']=self.append(newdata['included'], self.rawdata['included'])
-            except KeyError:
-                pass
-            self.Select()
+            self.common_append_data(self, newdata)
+
+        def Clear(self):
+            self.common_clear(self)
+
+        def Print(self):
+            self.common_print(self)
+
+        def PrintAll(self):
+            self.common_print_all(self)
+
+        def Update(self):
+            self.format_update(self, urlDict['Configuration'])
+
+        def Search(self, **kwargs):
+            self.common_search(self, **kwargs)
+
+        def SelectNext(self):
+            self.common_select_next(self)
+
         def Select(self):
-            editable=['organization-id', 'configuration-type-id', 'configuration-status-id',
-            'location-id', 'contact-id', 'manufacturer-id', 'model-id', 'operating-system-id',
-            'operating-system-notes', 'name', 'notes', 'hostname', 'primary-ip', 'mac-address',
-            'default-gateway', 'serial-number', 'asset-tag', 'position', 'installed-by',
-            'purchased-by', 'purchased-at', 'warranty-expires-at', 'installed-at']
-            canconvert=['organization-name', 'configuration-type-name', 'configuration-status-name',
-            'manufacturer-name', 'model-name']
-            self.update={}
-            update=False
+            editable = [
+                'organization-id', 'configuration-type-id', 'location-id',
+                'configuration-status-id', 'contact-id', 'manufacturer-id',
+                'model-id', 'operating-system-id', 'operating-system-notes',
+                'name', 'notes', 'hostname', 'primary-ip', 'mac-address',
+                'default-gateway', 'serial-number', 'asset-tag', 'position',
+                'installed-by', 'purchased-by', 'purchased-at',
+                'warranty-expires-at', 'installed-at']
+            canconvert = [
+                'organization-name', 'configuration-type-name',
+                'configuration-status-name', 'manufacturer-name', 'model-name']
+            self.update = {}
+            update = False
             try:
                 for x in editable:
-                    if self.item[x]!=self.control[x]:
-                        self.update[x]=self.item[x]
-                        update=True
+                    if self.item[x] != self.control[x]:
+                        self.update[x] = self.item[x]
+                        update = True
                 for x in canconvert:
-                    if self.item[x]!=self.control[x]:
-                        if x=='organization-name':
-                            organization_id=self.convertToID('org', self.item[x])
-                            self.update['organization-id']=organization_id
-                        elif x=='configuration-type-name':
-                            configuration_type_id=self.convertToID('configType', self.item[x])
-                            self.update['configuration-type-id']=configuration_type_id
-                        elif x=='configuration-status-name':
-                            configuration_status_id=self.convertToID('configStatus', self.item[x])
-                            self.update['configuration-status-id']=configuration_status_id
+                    if self.item[x] != self.control[x]:
+                        if x == 'organization-name':
+                            organization_id = self.convertToID('org', self.item[x])
+                            self.update['organization-id'] = organization_id
+                        elif x == 'configuration-type-name':
+                            configuration_type_id = self.convertToID('configType', self.item[x])
+                            self.update['configuration-type-id'] = configuration_type_id
+                        elif x == 'configuration-status-name':
+                            configuration_status_id = self.convertToID('configStatus', self.item[x])
+                            self.update['configuration-status-id'] = configuration_status_id
                         """
                         elif x=='manufacturer-name':
                             manufacturer_name=self.convertToID('configStatus', x)
                         elif x=='model-name':
                         """
-                        update=True
-            except AttributeError:
+                        update = True
+            except (AttributeError, TypeError):
                 pass
 
             if update:
-                self.update['id']=self.control['id']
-                self.update['type']=self.control['type']
+                self.update['id'] = self.control['id']
+                self.update['type'] = self.control['type']
                 self.updates.append(self.update)
-            self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
-            self.control=dict(self.item)
+            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            self.control = dict(self.item)
 
-        def Clear(self):
-            self.rawdata={'data':[], 'included':[]}
-            self.counter=0
-            self.updates=[]
-        def SelectNext(self):
-            self.counter=self.counter+1
-            try:
-                self.Select()
-                return False
-            except IndexError:
-                self.counter=0
-                self.Select()
-                return True
-        def Print(self):
-            for x in self.item:
-                print(x,": ", self.item[x])
-        def PrintAll(self):
-            counterholder=self.counter
-            self.counter=0
-            self.Select()
-            for x in self.rawdata['data']:
-                self.Print()
-                print('')
-                self.SelectNext()
-            self.counter=counterholder
-            self.Select()
+        def Post(self):
+            self.Create.Next()
+            config_items = []
+            for item in self.Create.create_list:
+                config_interface_items = []
+                config_interface = {}
+                y = 0
+                for x in item['configuration-interfaces-ip-address']:
+                    try:
+                        name = item['configuration-interfaces-name'][y]
+                    except (IndexError, TypeError):
+                        name = None
+                    try:
+                        primary = item['configuration-interfaces-primary'][y]
+                    except (IndexError, TypeError):
+                        primary = None
+                    try:
+                        notes = item['configuration-interfaces-notes'][y]
+                    except (IndexError, TypeError):
+                        notes = None
+                    config_interface[y] = {
+                        "ip": x, "name": name, "primary": primary,
+                        "notes": notes}
+                    y = y + 1
+                for x in config_interface:
+                    interface = {
+                        "type": "configuration_interfaces",
+                        "attributes": {
+                            "name": config_interface[x]["name"],
+                            "ip-address": config_interface[x]["ip"],
+                            "primary": config_interface[x]["primary"],
+                            "notes": config_interface[x]["notes"]}}
+                    for y in dict(interface["attributes"]):
+                        if interface["attributes"][y] is None:
+                            interface["attributes"].pop(y)
+                    config_interface_items.append(interface)
+                configuration = {
+                    "type": "configurations",
+                    "attributes": {
+                        "name": item["name"],
+                        "configuration-type-id": item["configuration-type-id"],
+                        "organization-id": item["organization-id"],
+                        "configuration-status-id": item["configuration-status-id"],
+                        "location-id": item["location-id"],
+                        "contact-id": item["contact-id"],
+                        "manufacturer-id": item["manufacturer-id"],
+                        "model-id": item["model-id"],
+                        "operating-system-id": item["operating-system-id"],
+                        "operating-system-notes": item["operating-system-notes"],
+                        "notes": item["notes"],
+                        "hostname": item["hostname"],
+                        "primary-ip": item["primary-ip"],
+                        "mac-address": item["mac-address"],
+                        "default-gateway": item["default-gateway"],
+                        "serial-number": item["serial-number"],
+                        "asset-tag": item["asset-tag"],
+                        "position": item["position"],
+                        "installed-by": item["installed-by"],
+                        "purchased-by": item["purchased-by"],
+                        "purchased-at": item["purchased-at"],
+                        "warranty-expires-at": item["warranty-expires-at"],
+                        "installed-at": item["installed-at"]}}
+                for y in dict(configuration["attributes"]):
+                    if configuration["attributes"][y] is None:
+                        configuration["attributes"].pop(y)
 
-        def Update(self):
-            self.Select()
-            self.format_update(self.updates, urlDict['Configuration'])
+
+                if config_interface_items != []:
+                    configuration["relationships"] = {"configuration_interfaces": {"data": config_interface_items}}
+                config_items.append(configuration)
+            data = {"data": config_items}
+            self.postRequest(urlDict['Configuration'], data)
 
     class FlexibleAsset:
-        def __init__(self, loadData, append, convertToID, patchRequest):
-            self.self=self
-            self.rawdata={'data':[], 'included':[]}
-            self.counter=0
-            self.loadData=loadData
-            self.append=append
-            self.convertToID=convertToID
-            self.updates=[]
-            self.patchRequest=patchRequest
+        def __init__(self, loadData, append, convertToID, patchRequest,
+                     common_print, common_select_next, common_clear,
+                     common_print_all, common_append_data, common_search):
+            self.self = self
+            self.rawdata = {'data': [], 'included': []}
+            self.counter = 0
+            self.loadData = loadData
+            self.append = append
+            self.convertToID = convertToID
+            self.updates = []
+            self.patchRequest = patchRequest
+            self.common_print = common_print
+            self.common_select_next = common_select_next
+            self.common_clear = common_clear
+            self.common_print_all = common_print_all
+            self.common_append_data = common_append_data
 
         def appendData(self, newdata):
-            self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
-            try:
-                self.rawdata['included']=self.append(newdata['included'], self.rawdata['included'])
-            except KeyError:
-                pass
-            self.Select()
-        def Select(self):
-            noneditable=['id', 'name', 'type', 'resource-url', 'restricted', 'my-glue',
-            'flexible-asset-type-id', 'flexible-asset-type-name', 'created-at',
-            'updated-at']
+            seld.common_append_data(self, newdata)
 
-            #There is no canconvert list because the only item that can be converted is the
-            #Organization Name
-            self.update={}
-            update=False
+        def Clear(self):
+            self.common_clear(self)
+
+        def Print(self):
+            self.common_print(self)
+
+        def PrintAll(self):
+            self.common_print_all(self)
+
+        def Search(self, **kwargs):
+            self.common_search(self, **kwargs)
+
+        def SelectNext(self):
+            self.common_select_next(self)
+
+        def Select(self):
+            noneditable = [
+                'id', 'name', 'type', 'resource-url', 'restricted', 'my-glue',
+                'flexible-asset-type-id', 'flexible-asset-type-name',
+                'created-at', 'updated-at']
+
+            # There is no canconvert list because the only item that can be converted is the
+            # Organization Name
+            self.update = {}
+            update = False
             try:
                 for x in self.item:
                     if x not in noneditable:
                         if self.item[x] != self.control[x]:
-                            update=True
-                            if x=='organization-name':
-                                organization_id=self.convertToID('org', self.item[x])
-                                self.update['organization-id']=organization_id
+                            update = True
+                            if x == 'organization-name':
+                                organization_id = self.convertToID('org', self.item[x])
+                                self.update['organization-id'] = organization_id
                             elif isinstance(self.control[x], dict):
                                 if isinstance(self.item[x], list):
-                                    self.update[x]=self.item[x]
+                                    self.update[x] = self.item[x]
                                 else:
-                                    error=("Tagged Items in Flexible Assets must be updated as a list of ITGlue IDs")
+                                    error = ("Tagged Items in Flexible Assets must be updated as a list of ITGlue IDs")
                                     raise RuntimeError(error)
                             else:
                                 self.update[x] = self.item[x]
@@ -563,10 +796,10 @@ class pytglue:
                 pass
 
             if update:
-                self.update['id']=self.control['id']
-                self.update['type']=self.control['type']
-                updatekeys=list(self.update.keys())
-                itemkeys=list(self.item.keys())
+                self.update['id'] = self.control['id']
+                self.update['type'] = self.control['type']
+                updatekeys = list(self.update.keys())
+                itemkeys = list(self.item.keys())
                 for x in list(itemkeys):
                     if x in noneditable:
                         itemkeys.remove(x)
@@ -574,159 +807,123 @@ class pytglue:
                         itemkeys.remove(x)
                 for x in itemkeys:
                     if isinstance(self.control[x], dict):
-                        idlist=[]
+                        idlist = []
                         for y in self.control[x]['values']:
                             idlist.append(y['id'])
-                        self.update[x]=idlist
+                        self.update[x] = idlist
                     else:
-                        self.update[x]=self.control[x]
+                        self.update[x] = self.control[x]
                 self.update.pop('organization-name')
                 self.updates.append(self.update)
 
-            self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
-            self.control=dict(self.item)
-
-        def SelectNext(self):
-            self.counter=self.counter+1
-            try:
-                self.Select()
-            except IndexError:
-                self.counter=0
-                self.Select()
-            except AttributeError:
-                pass
-
-        def Print(self):
-            for x in self.item:
-                print(x,": ", self.item[x])
-        def PrintAll(self):
-            counterholder=self.counter
-            self.counter=0
-            self.Select()
-            for x in self.rawdata['data']:
-                self.Print()
-                print('\n\n\n')
-                self.SelectNext()
-            self.counter=counterholder
-            self.Select()
+            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            self.control = dict(self.item)
 
         def Update(self):
-            url=urlDict['Flexible Asset']
+            url = urlDict['Flexible Asset']
             self.Select()
-            update={"data":[]}
+            update = {"data": []}
             for x in self.updates:
-                updatequeue={"type":x.pop("type"), "attributes": {"id": x.pop("id"),"organization-id":x.pop("organization-id"), "traits":{}}}
+                updatequeue = {
+                    "type": x.pop("type"), "attributes": {"id": x.pop("id"),
+                    "organization-id": x.pop("organization-id"), "traits": {}}}
                 for y in x:
-                    updatequeue["attributes"]["traits"][y]=x[y]
-                if len(self.updates)==1:
-                    id=updatequeue["attributes"].pop("id")
-                    url=url+"/"+id
-                    update["data"]=updatequeue
+                    updatequeue["attributes"]["traits"][y] = x[y]
+                if len(self.updates) == 1:
+                    id = updatequeue["attributes"].pop("id")
+                    url = url+"/"+id
+                    update["data"] = updatequeue
                 else:
                     update["data"].append(updatequeue)
-            self.updatetest=update
-            self.updates=[]
+            self.updatetest = update
+            self.updates = []
 
             self.patchRequest(url, update)
-## There is something wrong with the Contacts query with org ids. the query gives
-## 'filter[organization_id]=' but it needs to be 'organization_id=' for contacts
+# There is something wrong with the Contacts query with org ids. the query gives
+# 'filter[organization_id]=' but it needs to be 'organization_id=' for contacts
+
     class Contacts:
-        def __init__(self, loadData, append):
-            self.self=self
-            self.rawdata={'data':[], 'included':[]}
-            self.counter=0
-            self.loadData=loadData
-            self.append=append
+        def __init__(self, loadData, append, convertToID, patchRequest,
+                     format_update, common_print, common_select_next,
+                     common_clear, common_print_all, common_append_data,
+                     common_search):
+
+            self.self = self
+            self.rawdata = {'data': [], 'included': []}
+            self.counter = 0
+            self.loadData = loadData
+            self.append = append
+            self.convertToID = convertToID
+            self.updates = []
+            self.patchRequest = patchRequest
+            self.format_update = format_update
+            self.common_print = common_print
+            self.common_select_next = common_select_next
+            self.common_clear = common_clear
+            self.common_print_all = common_print_all
+            self.common_append_data = common_append_data
+            self.common_search = common_search
 
         def appendData(self, newdata):
-            self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
-            try:
-                self.rawdata['included']=self.append(newdata['included'], self.rawdata['included'])
-            except KeyError:
-                pass
-            self.Select()
-        def Select(self):
-            self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
-        def SelectNext(self):
-            self.counter=self.counter+1
-            try:
-                self.Select()
-            except IndexError:
-                self.counter=0
-                self.Select()
+            self.common_append_data(self, newdata)
+
+        def Clear(self):
+            self.common_clear(self)
+
         def Print(self):
-            for x in self.item:
-                print(x,": ", self.item[x])
+            self.common_print(self)
+
         def PrintAll(self):
-            counterholder=self.counter
-            self.counter=0
-            self.Select()
-            for x in self.rawdata['data']:
-                self.Print()
-                print('')
-                print('')
-                print('')
-                self.SelectNext()
-            self.counter=counterholder
-            self.Select()
+            self.common_print_all(self)
+
+        def Search(self, **kwargs):
+            self.common_search(self, **kwargs)
+
+        def SelectNext(self):
+            self.common_select_next(self)
+
+        def Select(self):
+            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
 
     class Organizations:
-        def __init__(self, loadData, append):
-            self.self=self
-            self.rawdata={'data':[], 'included':[]}
-            self.counter=0
-            self.loadData=loadData
-            self.append=append
+        def __init__(self, loadData, append, convertToID, patchRequest,
+                     format_update, common_print, common_select_next,
+                     common_clear, common_print_all, common_append_data,
+                     common_search):
+
+            self.self = self
+            self.rawdata = {'data': [], 'included': []}
+            self.counter = 0
+            self.loadData = loadData
+            self.append = append
+            self.convertToID = convertToID
+            self.updates = []
+            self.patchRequest = patchRequest
+            self.format_update = format_update
+            self.common_print = common_print
+            self.common_select_next = common_select_next
+            self.common_clear = common_clear
+            self.common_print_all = common_print_all
+            self.common_append_data = common_append_data
+            self.common_search = common_search
 
         def appendData(self, newdata):
-            self.rawdata['data']=self.append(newdata['data'], self.rawdata['data'])
-            try:
-                self.rawdata['included']=self.append(newdata['included'], self.rawdata['included'])
-            except KeyError:
-                pass
-            self.Select()
-        def Select(self):
-            self.item=self.loadData(self.rawdata['data'][self.counter], self.rawdata)
-        def SelectNext(self):
-            self.counter=self.counter+1
-            try:
-                self.Select()
-                return False
-            except IndexError:
-                self.counter=0
-                self.Select()
-                return True
-        def Print(self):
-            for x in self.item:
-                print(x,": ", self.item[x])
-        def PrintAll(self):
-            counterholder=self.counter
-            self.counter=0
-            self.Select()
-            for x in self.rawdata['data']:
-                self.Print()
-                print('')
-                print('')
-                print('')
-                self.SelectNext()
-            self.counter=counterholder
-            self.Select()
+            self.common_append_data(self, newdata)
+
         def Clear(self):
-            self.rawdata={'data':[], 'included':[]}
-            self.counter=0
-            self.updates=[]
+            self.common_clear(self)
+
+        def Print(self):
+            self.common_print(self)
+
+        def PrintAll(self):
+            self.common_print_all(self)
+
         def Search(self, **kwargs):
-            ## Will only return value of last kwarg
-            ## Can search on any key, but will only return the first value.
-            self.counter=0
-            self.Select()
-            for key in kwargs:
-                value=kwargs[key]
-                end=False
-                while not end:
-                    if self.item[key]==value:
-                        break
-                    else:
-                        end=self.SelectNext()
-                if end==True:
-                    print("No Value Found")
+            self.common_search(self, **kwargs)
+
+        def SelectNext(self):
+            self.common_select_next(self)
+
+        def Select(self):
+            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
