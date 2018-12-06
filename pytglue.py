@@ -725,9 +725,9 @@ class pytglue:
 
                 if config_interface_items != []:
                     configuration["relationships"] = {"configuration_interfaces": {"data": config_interface_items}}
-                config_items.append(configuration)
-            data = {"data": config_items}
-            self.postRequest(urlDict['Configuration'], data)
+                #config_items.append(configuration)
+                data = {"data": configuration}
+                self.postRequest(urlDict['Configuration'], data)
 
     class FlexibleAsset:
         def __init__(self, loadData, append, convertToID, patchRequest,
