@@ -5,16 +5,16 @@ import types
 
 urlDict = {
     'configurations': 'https://api.itglue.com/configurations',
-    'Configuration': 'https://api.itglue.com/configurations',
-    'configuration_interfaces': 'https://api.itglue.com/configuration_interfaces',
+    'Configurations': 'https://api.itglue.com/configurations',
+    'config_interfaces': 'https://api.itglue.com/configuration_interfaces',
     'configuration_statuses': 'https://api.itglue.com/configuration_statuses',
     'configuration_types': 'https://api.itglue.com/configuration_types',
     'contacts': 'https://api.itglue.com/contacts',
-    'Contact': 'https://api.itglue.com/contacts',
+    'Contacts': 'https://api.itglue.com/contacts',
     'contact_types': 'https://api.itglue.com/contact_types',
     'countries': 'https://api.itglue.com/countries',
     'flexible_asset': 'https://api.itglue.com/flexible_assets',
-    'Flexible Asset': 'https://api.itglue.com/flexible_assets',
+    'Flexible Assets': 'https://api.itglue.com/flexible_assets',
     'flexible_asset_fields': 'https://api.itglue.com/flexible_assets_fields',
     'flexible_asset_types': 'https://api.itglue.com/flexible_asset_types',
     'locations': 'https://api.itglue.com/locations',
@@ -22,7 +22,7 @@ urlDict = {
     'models': 'https://api.itglue.com/models',
     'operating_systems': 'https://api.itglue.com/operating_systems',
     'organizations': 'https://api.itglue.com/organizations',
-    'Organization': 'https://api.itglue.com/organizations',
+    'Organizations': 'https://api.itglue.com/organizations',
     'organization_statuses': 'https://api.itglue.com/organization_statuses',
     'organization_types': 'https://api.itglue.com/organization_types',
     'password': 'https://api.itglue.com/passwords',
@@ -35,8 +35,8 @@ filterDict = {
     'id': 'filter[id]=',
     'name': 'filter[name]=',
     'org': 'filter[organization_id]=',
-    'configType': 'filter[configuration_type_id]=',
-    'configStatus': 'filter[configuration_status_id]=',
+    'ConfigType': 'filter[configuration_type_id]=',
+    'ConfigStatus': 'filter[configuration_status_id]=',
     'contactID': 'filter[contact_id]=',
     'serial': 'filter[serial_number]=',
     'rmmID': 'filter[rmm_id]=',
@@ -53,7 +53,7 @@ filterDict = {
     'excludeName': 'filter[exclude][name]=',
     'excludeOrgType': 'filter[exclude][organization_type_id]=',
     'excludeOrgStatus': 'filter[exclude][organization_status_id]=',
-    'flexibleAssetType': 'filter[flexible_asset_type_id]=',
+    'FlexibleAssetType': 'filter[flexible_asset_type_id]=',
     'firstName': 'filter[first_name]=',
     'lastName': 'filter[last_name]=',
     'title': 'filter[title]=',
@@ -102,35 +102,180 @@ pageDict = {
 
 
 class pytglue:
-    def __init__(self):
+    def __init__(self, apikey, load_id=True):
         self.self = self
 
+        self.Connect(apikey, load_id=True)
+
         self.Configurations = self.Configurations(
-            self.loadData, self.append, self.convertToID, self.patchRequest,
-            self.format_update, self.common_print, self.common_select_next,
-            self.common_clear, self.common_print_all, self.common_append_data,
-            self.common_search, self.Create, self.postRequest)
+            self.common_load_data, self.common_merge_data,
+            self.common_convert_to_id, self.common_patch_request,
+            self.common_format_update, self.common_print,
+            self.common_select_next, self.common_clear, self.common_print_all,
+            self.common_append_data, self.common_search, self.Create,
+            self.common_post_request, self.common_select)
 
         self.FlexibleAsset = self.FlexibleAsset(
-            self.loadData, self.append, self.convertToID, self.patchRequest,
+            self.common_load_data, self.common_merge_data,
+            self.common_convert_to_id, self.common_patch_request,
             self.common_print, self.common_select_next, self.common_clear,
             self.common_print_all, self.common_append_data, self.common_search)
 
         self.Contacts = self.Contacts(
-            self.loadData, self.append, self.convertToID, self.patchRequest,
-            self.format_update, self.common_print, self.common_select_next,
-            self.common_clear, self.common_print_all, self.common_append_data,
-            self.common_search)
+            self.common_load_data, self.common_merge_data,
+            self.common_convert_to_id, self.common_patch_request,
+            self.common_format_update, self.common_print,
+            self.common_select_next, self.common_clear, self.common_print_all,
+            self.common_append_data, self.common_search,
+            self.common_select)
 
         self.Organizations = self.Organizations(
-            self.loadData, self.append, self.convertToID, self.patchRequest,
-            self.format_update, self.common_print, self.common_select_next,
-            self.common_clear, self.common_print_all, self.common_append_data,
-            self.common_search)
+            self.common_load_data, self.common_merge_data,
+            self.common_convert_to_id, self.common_patch_request,
+            self.common_format_update, self.common_print,
+            self.common_select_next, self.common_clear, self.common_print_all,
+            self.common_append_data, self.common_search,
+            self.common_select)
 
-        self.updates = []
+    def Connect(self, apikey, load_id=True):
+        self.getheader = {'x-api-key': apikey}
+        self.postheader = {
+            'x-api-key': apikey, 'Content-Type': 'application/vnd.api+json'}
 
-    def makeQuery(self, query, param=None, param_value=None, final=False):
+        if load_id:
+            self.idlist = {
+                'manufacturers': {}, 'organizations': {},
+                'configuration_statuses': {}, 'configuration_types': {},
+                'contact_types': {}, 'countries': {},
+                'flexible_asset_types': {}, 'operating_systems': {},
+                'organization_types': {}, 'organization_statuses': {},
+                'password_categories': {}, 'regions': {},
+                'models': {'None': {}}}
+
+            query = ''
+            query = self.common_make_query(query, 'sort-name')
+            query = self.common_make_query(
+                query, 'page-size', 1000, final=True)
+            for cat in self.idlist:
+                response = self.common_get_request(urlDict[cat], query)
+                if cat != 'models':
+                    for x in response['data']:
+                        key = x['attributes']['name']
+                        value = x['id']
+                        self.idlist[cat][key] = value
+                else:
+                    for key in self.idlist['manufacturers']:
+                        self.idlist['models'][key] = {}
+                    for x in response['data']:
+                        key = x['attributes']['manufacturer-name']
+                        if key is None:
+                            key = 'None'
+                        subkey = x['attributes']['name']
+                        value = x['id']
+                        self.idlist['models'][key][subkey] = value
+
+    def Get(self):
+        if self.query == '':
+            self.query = None
+            self.filter_by_id = False
+        if not self.filter_by_id:
+            url = urlDict[self.query_type]
+        else:
+            url = urlDict[self.query_type] + "/" + str(self.filter_by_ip)
+
+        if self.query_type == 'Configurations':
+            self.rawdata = self.common_get_request(url, self.query)
+            self.Configurations.appendData(self.rawdata)
+        elif self.query_type == 'Flexible Assets':
+            self.rawdata = self.common_get_request(url, self.query)
+            self.FlexibleAsset.appendData(self.rawdata)
+        elif self.query_type == 'Organizations':
+            self.rawdata = self.common_get_request(url, self.query)
+            self.Organizations.appendData(self.rawdata)
+        elif self.query_type == 'Contacts':
+            self.rawdata = self.common_get_request(url, self.query)
+            self.Contacts.appendData(self.rawdata)
+
+    def Query(self, query_type):
+        self.query_type = query_type
+        if self.query_type == 'Configurations':
+            self.query = ''
+            self.FilterList = [
+                'id', 'name', 'org', 'ConfigType', 'ConfigStatus', 'contactID',
+                'serial', 'rmmID', 'rmm']
+            self.IncludeList = [
+                'interfaces', 'rmmRecord', 'password', 'attachments',
+                'relatedItems', 'updated', 'location']
+            self.canConvert = ['org', 'ConfigType', 'ConfigStatus']
+
+        if self.query_type == 'Flexible Assets':
+            self.query = ''
+            self.FilterList = ['FlexibleAssetType', 'name', 'org']
+            self.canConvert = ['FlexibleAssetType', 'org']
+            self.IncludeList = ['password']
+
+        if self.query_type == 'Organizations':
+            self.query = ''
+            self.FilterList = [
+                'id', 'name', 'orgType', 'orgStatus', 'created', 'updated',
+                'excludeID', 'excludeName', 'excludeOrgType',
+                'excludeOrgStatus']
+            self.canConvert = [
+                'orgType', 'orgStatus', 'excludeOrgType', 'excludeOrgStatus']
+            self.IncludeList = []
+
+        if self.query_type == 'Contacts':
+            self.query = ''
+            self.FilterList = [
+                'org', 'firstName', 'lastName', 'title', 'contactType',
+                'important', 'primaryEmail']
+            self.canConvert = ['org', 'contactType']
+            self.IncludeList = ['location', 'password']
+
+    def Filter(self, **kwargs):
+        if kwargs is not None:
+            filter = {}
+            include = {}
+            for key in kwargs:
+                if key in self.FilterList:
+                    filter[key] = kwargs[key]
+                elif key in self.IncludeList:
+                    include[key] = kwargs[key]
+                else:
+                    error = 'Invalid Variable: '+key
+                    raise RuntimeError(error)
+
+            for key in filter:
+                if 'id' in filter.keys():
+                    self.filter_by_id = filter[key]
+                    break
+                else:
+                    self.filter_by_id = False
+                    value = include[key]
+                    if isinstance(value, str):
+                        try:
+                            value = int(value)
+                        except ValueError:
+                            if key in self.canConvert:
+                                value = self.common_convert_to_id(key, value)
+                        self.query = self.common_make_query(
+                                                        self.query, key, value)
+
+            for key in include:
+                value = filter[key]
+                if isinstance(value, bool):
+                    self.query = self.common_make_query(self.query, key, value)
+                else:
+                    error = ('Invalid Variable: '
+                             + key
+                             + ', value for Included items must be Boolian.')
+                    raise RuntimeError(error)
+
+            self.query = self.common_make_query(self.query, final=True)
+
+    def common_make_query(
+            self, query, param=None, param_value=None, final=False):
+
         if param_value is not None:
             param_value = str(param_value)
         if param in filterDict.keys():
@@ -147,7 +292,7 @@ class pytglue:
             query = query.rstrip('&')
         return query
 
-    def getRequest(self, url, query=None, return_all=True):
+    def common_get_request(self, url, query=None, return_all=True):
             response = requests.get(url, params=query, headers=self.getheader)
             if response.status_code < 199 or response.status_code < 299:
                 response = json.loads(response.text)
@@ -158,124 +303,55 @@ class pytglue:
                         links = response['links']
                         while 'next' in links:
                             nextpage = response['links']['next']
-                            response_alt = requests.get(nextpage, headers=self.getheader)
+                            response_alt = requests.get(nextpage,
+                                                        headers=self.getheader)
                             response_alt = json.loads(response_alt.text)
                             for key in response.keys():
                                 if key == 'links':
                                     response[key] = response_alt[key]
                                 elif isinstance(response[key], list):
-                                    response[key] = response[key]+response_alt[key]
+                                    response[key] = (response[key]
+                                                     + response_alt[key])
                             links = response['links']
                     except KeyError:
                         pass
                     return response
             else:
-                error = ("Status Code: ", response.status_code,
-                         "\nResponse Text: ", response.text, "\nRequest URL: ",
-                         url, "\nRequest Header: ", self.getheader,
-                         "\nRequest Query: ", query)
+                error = ('Status Code: ', response.status_code,
+                         '\nResponse Text: ', response.text, '\nRequest URL: ',
+                         url, '\nRequest Header: ', self.getheader,
+                         '\nRequest Query: ', query)
                 raise RuntimeError(error)
 
-    def patchRequest(self, url, query):
-        query = json.dumps(query)
-        response = requests.patch(url, data=query, headers=self.postheader)
+    def common_patch_request(self, url, data):
+        data = json.dumps(data)
+        response = requests.patch(url, data=data, headers=self.postheader)
         if response.status_code < 199 or response.status_code < 299:
             response = json.loads(response.text)
         else:
-            error = ("Status Code: ", response.status_code, "\nResponse Text: ",
-                     response.text, "\nRequest URL: ", url, "\nRequest Header: ",
-                     self.postheader, "\nRequest Query: ", query)
+            error = ('Status Code: ', response.status_code,
+                     '\nResponse Text: ', response.text, '\nRequest URL: ',
+                     url, '\nRequest Header: ', self.postheader,
+                     '\nRequest Data: ', query)
             raise RuntimeError(error)
 
-    def postRequest(self, url, query):
-        data = json.dumps(query)
+    def common_post_request(self, url, data):
+        data = json.dumps(data)
         response = requests.post(url, data=data, headers=self.postheader)
         if response.status_code < 199 or response.status_code < 299:
             response = json.loads(response.text)
         else:
-            error = ("Status Code: ", response.status_code, "\nResponse Text: ",
-                     response.text, "\nRequest URL: ", url, "\nRequest Header: ",
-                     self.postheader, "\nRequest Query: ", query)
-            raise RuntimeError(error)
-    def Get(self):
-        if self.query == '':
-            self.query = None
-        if self.queryType == 'Configuration':
-            self.rawdata = self.getRequest(urlDict[self.queryType], self.query)
-            self.Configurations.appendData(self.rawdata)
-        if self.queryType == 'Flexible Asset':
-            self.rawdata = self.getRequest(urlDict[self.queryType], self.query)
-            self.FlexibleAsset.appendData(self.rawdata)
-        if self.queryType == 'Organization':
-            self.rawdata = self.getRequest(urlDict[self.queryType], self.query)
-            self.Organizations.appendData(self.rawdata)
-        if self.queryType == 'Contact':
-            self.rawdata = self.getRequest(urlDict[self.queryType], self.query)
-            self.Contacts.appendData(self.rawdata)
-
-
-    def Connect(self, apikey):
-        self.getheader = {'x-api-key': apikey}
-        self.postheader = {
-            'x-api-key': apikey, 'Content-Type': 'application/vnd.api+json'}
-
-        self.idlist = {
-            'manufacturers': {}, 'organizations': {},
-            'configuration_statuses': {}, 'configuration_types': {},
-            'contact_types': {}, 'countries': {}, 'flexible_asset_types': {},
-            'operating_systems': {}, 'organization_types': {},
-            'organization_statuses': {}, 'password_categories': {},
-            'regions': {}, 'models': {'None': {}}}
-
-        query = ''
-        query = self.makeQuery(query, 'sort-name')
-        query = self.makeQuery(query, 'page-size', 1000, final=True)
-        for cat in self.idlist:
-            response = self.getRequest(urlDict[cat], query)
-            if cat != 'models':
-                for x in response['data']:
-                    key = x['attributes']['name']
-                    value = x['id']
-                    self.idlist[cat][key] = value
-            else:
-                for key in self.idlist['manufacturers']:
-                    self.idlist['models'][key] = {}
-                for x in response['data']:
-                    key = x['attributes']['manufacturer-name']
-                    if key is None:
-                        key = 'None'
-                    subkey = x['attributes']['name']
-                    value = x['id']
-                    self.idlist['models'][key][subkey] = value
-
-    def printPretty(self, cat, manufacturer=None):
-        catlist = [
-            'manufacturers', 'organizations', 'configuration_statuses',
-            'configuration_types', 'contact_types', 'countries',
-            'flexible_asset_types', 'operating_systems', 'organization_types',
-            'password_categories', 'regions']
-        if cat == 'models':
-            if manufacturer is None:
-                for key in self.idlist['models']:
-                    print(key)
-                    for subkey in self.idlist['models'][key]:
-                        print(subkey, ": ", self.idlist['models'][key][subkey])
-                    print('')
-            else:
-                for subkey in self.idlist['models'][manufacturer]:
-                    print(subkey, ": ", self.idlist['models'][manufacturer][subkey])
-        elif cat in catlist:
-            for key in self.idlist[cat]:
-                print(key, ": ", self.idlist[cat][key])
-        else:
-            error = "Invalid Category Selection: " + cat
+            error = ('Status Code: ', response.status_code,
+                     '\nResponse Text: ', response.text, '\nRequest URL: ',
+                     url, '\nRequest Header: ', self.postheader,
+                     '\nRequest Data: ', query)
             raise RuntimeError(error)
 
-    def convertToID(self, key, value):
+    def common_convert_to_id(self, key, value):
         organization_aliases = ['org', 'organization-name']
-        configType_aliases = ['configType', 'configuration-type-name']
-        configStatus_aliases = ['configStatus', 'configuration-status-name']
-        flexibleAssetType_aliases = ['flexibleAssetType']
+        ConfigType_aliases = ['ConfigType', 'configuration-type-name']
+        ConfigStatus_aliases = ['ConfigStatus', 'configuration-status-name']
+        FlexibleAssetType_aliases = ['FlexibleAssetType']
         orgType_aliases = ['orgType', 'excludeOrgType']
         orgStatus_aliases = ['orgStatus', 'excludeOrgStatus']
         contactType_aliases = ['contactType']
@@ -283,11 +359,11 @@ class pytglue:
         try:
             if key in organization_aliases:
                 value = int(self.idlist['organizations'][value])
-            elif key in configType_aliases:
+            elif key in ConfigType_aliases:
                 value = int(self.idlist['configuration_types'][value])
-            elif key in configStatus_aliases:
+            elif key in ConfigStatus_aliases:
                 value = int(self.idlist['configuration_statuses'][value])
-            elif key in flexibleAssetType_aliases:
+            elif key in FlexibleAssetType_aliases:
                 value = int(self.idlist['flexible_asset_types'][value])
             elif key in orgType_aliases:
                 value = int(self.idlist['organization_types'][value])
@@ -297,90 +373,50 @@ class pytglue:
                 value = int(self.idlist['contact_types'][value])
             return value
         except KeyError:
-            error = "Invalid "+key+" choice: " + value
+            error = 'Invalid '+key+' choice: ' + value
             raise RuntimeError(error)
 
-    def Query(self, queryType):
-        self.queryType = queryType
-        if self.queryType == 'Configuration':
-            self.query = ''
-            self.FilterList = [
-                'id', 'name', 'org', 'configType', 'configStatus', 'contactID',
-                'serial', 'rmmID', 'rmm']
-            self.IncludeList = [
-                'interfaces', 'rmmRecord', 'password', 'attachments',
-                'relatedItems', 'updated', 'location']
-            self.canConvert = ['org', 'configType', 'configStatus']
-
-        if self.queryType == 'Flexible Asset':
-            self.query = ''
-            self.FilterList = ['flexibleAssetType', 'name', 'org']
-            self.canConvert = ['flexibleAssetType', 'org']
-            self.IncludeList = ['password']
-
-        if self.queryType == 'Organization':
-            self.query = ''
-            self.FilterList = [
-                'id', 'name', 'orgType', 'orgStatus', 'created', 'updated',
-                'excludeID', 'excludeName', 'excludeOrgType',
-                'excludeOrgStatus']
-            self.canConvert = [
-                'orgType', 'orgStatus', 'excludeOrgType', 'excludeOrgStatus']
-            self.IncludeList = []
-
-        if self.queryType == 'Contact':
-            self.query = ''
-            self.FilterList = [
-                'org', 'firstName', 'lastName', 'title', 'contactType',
-                'important', 'primaryEmail']
-            self.canConvert = ['org', 'contactType']
-            self.IncludeList = ['location', 'password']
-        # Add in other items
-
-    def Filter(self, **kwargs):
-        def clear(self):
-            self.query = ''
-        if kwargs is not None:
-            for key in kwargs:
-                value = kwargs[key]
-                if key in self.FilterList:
-                    if isinstance(value, str):
-                        try:
-                            value = int(value)
-                        except ValueError:
-                            if key in self.canConvert:
-                                value = self.convertToID(key, value)
-                        self.query = self.makeQuery(self.query, key, value)
-                # Add in sort, show, and include
-                elif key in self.IncludeList:
-                    if isinstance(value, bool):
-                        self.query = self.makeQuery(self.query, key, value)
-                    else:
-                        error = "Invalid Variable: " + key + ", value for Included items must be Boolian."
-                        raise RuntimeError(error)
-                else:
-                    error = "Invalid Variable: "+key
-                    raise RuntimeError(error)
-
-            self.query = self.makeQuery(self.query, final=True)
-
-    def append(self, newdata, existingdata):
-        for x in newdata:
-            if existingdata is None:
-                existingdata.append(x)
+    def PrintPretty(self, cat, manufacturer=None):
+        catlist = [
+            'manufacturers', 'organizations', 'configuration_statuses',
+            'configuration_types', 'contact_types', 'countries',
+            'flexible_asset_types', 'operating_systems', 'organization_types',
+            'password_categories', 'regions']
+        if cat == 'models':
+            models = self.idlist['models']
+            if manufacturer is None:
+                for key in models:
+                    print(key)
+                    for subkey in models[key]:
+                        print(subkey, ': ', models[key][subkey])
+                    print('')
             else:
-                if x in existingdata:
+                for subkey in models[manufacturer]:
+                    print(subkey, ': ', models[manufacturer][subkey])
+        elif cat in catlist:
+            for key in self.idlist[cat]:
+                print(key, ': ', self.idlist[cat][key])
+        else:
+            error = 'Invalid Category Selection: ' + cat
+            raise RuntimeError(error)
+
+    def common_merge_data(self, newdata, data):
+        for x in newdata:
+            if data is None:
+                data.append(x)
+            else:
+                if x in data:
                     continue
-                for y in existingdata:
+                for y in data:
                     if x['id'] == y['id']:
                         key = list(x['relationships'].keys())
                         key = key[0]
-                        existingdata[y]['relationships'][key] = x['relationships'][key]
+                        data[y]['relationships'][key] = x['relationships'][key]
                         continue
-                existingdata.append(x)
-        return existingdata
+                data.append(x)
+        return data
 
-    def loadData(self, singledata, alldata):
+    def common_load_data(self, singledata, alldata):
         def loop(result, key_1, singledata, alldata):
             if isinstance(singledata[key_1], str):
                 result[key_1] = singledata[key_1]
@@ -395,7 +431,9 @@ class pytglue:
                         else:
                             key_5 = list(singledata[key_1][key_2].keys())
                             key_5 = key_5[0]
-                            if isinstance(singledata[key_1][key_2][key_5], list):
+                            if isinstance(
+                                        singledata[key_1][key_2][key_5], list):
+
                                 for list_1 in singledata[key_1][key_2][key_5]:
 
                                     included_id = list_1['id']
@@ -403,16 +441,25 @@ class pytglue:
                                     for list_2 in alldata['included']:
                                         if list_2['id'] == included_id:
                                             for key_3 in list_2:
-                                                if isinstance(list_2[key_3], dict):
+                                                if isinstance(
+                                                        list_2[key_3], dict):
+
                                                     for key_4 in list_2[key_3]:
-                                                        result_key = list_2['type']+'-'+key_4
-                                                        result_value = list_2[key_3][key_4]
+                                                        result_key = (
+                                                                list_2['type']
+                                                                + '-'
+                                                                + key_4)
+                                                        result_value = (
+                                                          list_2[key_3][key_4])
+
                                                         try:
                                                             result[result_key].append(result_value)
                                                         except (NameError, KeyError):
                                                             result[result_key] = [result_value]
                                                 else:
-                                                    result_key = list_2['type'] + '-' + key_3
+                                                    result_key = (list_2['type']
+                                                                  + '-'
+                                                                  + key_3)
                                                     result_value = list_2[key_3]
                                                     try:
                                                         result[result_key].append(result_value)
@@ -428,21 +475,19 @@ class pytglue:
             result = loop(result, key_1, singledata, alldata)
         return result
 
-    # Called by "Update" in individual classes except for Flexible Asset
-
-    def format_update(self, subclass, url):
+    def common_format_update(self, subclass, url):
         subclass.Select()
-        update = {"data": []}
+        update = {'data': []}
         for x in subclass.updates:
-            updatequeue = {"type": x.pop("type"), "attributes": {}}
+            updatequeue = {'type': x.pop('type'), 'attributes': {}}
             for y in x:
-                updatequeue["attributes"][y] = x[y]
-            update["data"].append(updatequeue)
-        self.patchRequest(url, update)
+                updatequeue['attributes'][y] = x[y]
+            update['data'].append(updatequeue)
+        self.common_patch_request(url, update)
 
     def common_print(self, subclass):
         for x in subclass.item:
-            print(x, ": ", subclass.item[x])
+            print(x, ': ', subclass.item[x])
 
     def common_select_next(self, subclass):
         subclass.counter = subclass.counter+1
@@ -471,9 +516,12 @@ class pytglue:
         subclass.Select()
 
     def common_append_data(self, subclass, newdata):
-        subclass.rawdata['data'] = subclass.append(newdata['data'], subclass.rawdata['data'])
+        subclass.rawdata['data'] = subclass.common_merge_data(
+                                    newdata['data'], subclass.rawdata['data'])
         try:
-            subclass.rawdata['included'] = subclass.append(newdata['included'], subclass.rawdata['included'])
+            subclass.rawdata['included'] = subclass.common_merge_data(
+                                                newdata['included'],
+                                                subclass.rawdata['included'])
         except KeyError:
             pass
         subclass.Select()
@@ -492,7 +540,7 @@ class pytglue:
                 else:
                     end = subclass.SelectNext()
             if end is True:
-                print("No Value Found")
+                print('No Value Found')
 
     def common_select(self, subclass, editable, canconvert):
         changes = {}
@@ -504,7 +552,8 @@ class pytglue:
                     update = True
             for x in canconvert:
                 if subclass.item[x] != subclass.control[x]:
-                    converted = subclass.convertToID(x, subclass.item[x])
+                    converted = subclass.common_convert_to_id(
+                                                        x, subclass.item[x])
                     if x == 'organization-name':
                         changes['organization-id'] = converted
                     elif x == 'configuration-type-name':
@@ -515,11 +564,7 @@ class pytglue:
                         changes['organization-type-id'] = converted
                     elif x == 'organization-status-name':
                         changes['organization-status-id'] = converted
-                    """
-                    elif x=='manufacturer-name':
-                        manufacturer_name=self.convertToID('configStatus', x)
-                    elif x=='model-name':
-                    """
+
                     update = True
         except (AttributeError, TypeError):
             pass
@@ -528,21 +573,22 @@ class pytglue:
             changes['id'] = subclass.control['id']
             changes['type'] = subclass.control['type']
             subclass.updates.append(changes)
-        subclass.item = subclass.loadData(subclass.rawdata['data'][subclass.counter], subclass.rawdata)
+        subclass.item = subclass.common_load_data(
+                                    subclass.rawdata['data'][subclass.counter],
+                                    subclass.rawdata)
         subclass.control = dict(subclass.item)
-
 
     class Create:
         def __init__(
                 self, subclass, create_items, create_required, create_convert,
-                convertToID, Post):
+                common_convert_to_id, Post):
             self.self = subclass
             self.new_create = create_items
             self.item = dict(self.new_create)
             self.required = create_required
             self.create_list = []
             self.create_convert = create_convert
-            self.convertToID = convertToID
+            self.common_convert_to_id = common_convert_to_id
             self.Post = Post
 
         def Next(self):
@@ -553,7 +599,7 @@ class pytglue:
         def requirement_check(self):
             for x in self.create_convert:
                 if self.item[x] is not None:
-                    id = self.convertToID(x, self.item[x])
+                    id = self.common_convert_to_id(x, self.item[x])
                     self.item[self.create_convert[x]] = id
             missing = False
             missing_fields = []
@@ -563,31 +609,34 @@ class pytglue:
                     missing = True
 
             if missing:
-                error = "Missing Required Field: "+key
+                error = 'Missing Required Field: '+key
                 raise RuntimeError(error)
 
     class Configurations:
-        def __init__(self, loadData, append, convertToID, patchRequest,
-                     format_update, common_print, common_select_next,
+        def __init__(self, common_load_data, common_merge_data,
+                     common_convert_to_id, common_patch_request,
+                     common_format_update, common_print, common_select_next,
                      common_clear, common_print_all, common_append_data,
-                     common_search, Create, postRequest):
+                     common_search, Create, common_post_request,
+                     common_select):
 
             self.self = self
             self.rawdata = {'data': [], 'included': []}
             self.counter = 0
-            self.loadData = loadData
-            self.append = append
-            self.convertToID = convertToID
+            self.common_load_data = common_load_data
+            self.common_merge_data = common_merge_data
+            self.common_convert_to_id = common_convert_to_id
             self.updates = []
-            self.patchRequest = patchRequest
-            self.format_update = format_update
+            self.common_patch_request = common_patch_request
+            self.common_format_update = common_format_update
             self.common_print = common_print
             self.common_select_next = common_select_next
             self.common_clear = common_clear
             self.common_print_all = common_print_all
             self.common_append_data = common_append_data
-            self.postRequest = postRequest
+            self.common_post_request = common_post_request
             self.common_select = common_select
+            self.common_search = common_search
             create_items = {
                 'organization-id': None, 'organization-name': None,
                 'configuration-type-id': None, 'configuration-type-name': None,
@@ -603,10 +652,10 @@ class pytglue:
                 'installed-at': None, 'configuration-interfaces-name': None,
                 'configuration-interfaces-ip-address': None,
                 'configuration-interfaces-primary': None,
-                'configuration-interfaces-notes': None, "type": "configurataions",
-                "configuration_interfaces": "configuration-interfaces"
+                'configuration-interfaces-notes': None
                 }
-            create_required = ['organization-id', 'configuration-type-id', 'name']
+            create_required = [
+                'organization-id', 'configuration-type-id', 'name']
             create_convert = {
                 'organization-name': 'organization-id',
                 'configuration-type-name': 'configuration-type-id',
@@ -615,7 +664,7 @@ class pytglue:
 
             self.Create = Create(
                 self, create_items, create_required, create_convert,
-                self.convertToID, self.Post)
+                self.common_convert_to_id, self.Post)
 
         def appendData(self, newdata):
             self.common_append_data(self, newdata)
@@ -630,7 +679,7 @@ class pytglue:
             self.common_print_all(self)
 
         def Update(self):
-            self.format_update(self, urlDict['Configuration'])
+            self.common_format_update(self, urlDict['Configuration'])
 
         def Search(self, **kwargs):
             self.common_search(self, **kwargs)
@@ -674,74 +723,78 @@ class pytglue:
                     except (IndexError, TypeError):
                         notes = None
                     config_interface[y] = {
-                        "ip": x, "name": name, "primary": primary,
-                        "notes": notes}
+                        'ip': x, 'name': name, 'primary': primary,
+                        'notes': notes}
                     y = y + 1
                 for x in config_interface:
                     interface = {
-                        "type": "configuration_interfaces",
-                        "attributes": {
-                            "name": config_interface[x]["name"],
-                            "ip-address": config_interface[x]["ip"],
-                            "primary": config_interface[x]["primary"],
-                            "notes": config_interface[x]["notes"]}}
-                    for y in dict(interface["attributes"]):
-                        if interface["attributes"][y] is None:
-                            interface["attributes"].pop(y)
+                        'type': 'configuration_interfaces',
+                        'attributes': {
+                            'name': config_interface[x]['name'],
+                            'ip-address': config_interface[x]['ip'],
+                            'primary': config_interface[x]['primary'],
+                            'notes': config_interface[x]['notes']}}
+                    for y in dict(interface['attributes']):
+                        if interface['attributes'][y] is None:
+                            interface['attributes'].pop(y)
                     config_interface_items.append(interface)
                 configuration = {
-                    "type": "configurations",
-                    "attributes": {
-                        "name": item["name"],
-                        "configuration-type-id": item["configuration-type-id"],
-                        "organization-id": item["organization-id"],
-                        "configuration-status-id": item["configuration-status-id"],
-                        "location-id": item["location-id"],
-                        "contact-id": item["contact-id"],
-                        "manufacturer-id": item["manufacturer-id"],
-                        "model-id": item["model-id"],
-                        "operating-system-id": item["operating-system-id"],
-                        "operating-system-notes": item["operating-system-notes"],
-                        "notes": item["notes"],
-                        "hostname": item["hostname"],
-                        "primary-ip": item["primary-ip"],
-                        "mac-address": item["mac-address"],
-                        "default-gateway": item["default-gateway"],
-                        "serial-number": item["serial-number"],
-                        "asset-tag": item["asset-tag"],
-                        "position": item["position"],
-                        "installed-by": item["installed-by"],
-                        "purchased-by": item["purchased-by"],
-                        "purchased-at": item["purchased-at"],
-                        "warranty-expires-at": item["warranty-expires-at"],
-                        "installed-at": item["installed-at"]}}
-                for y in dict(configuration["attributes"]):
-                    if configuration["attributes"][y] is None:
-                        configuration["attributes"].pop(y)
+                    'type': 'configurations',
+                    'attributes': {
+                        'name': item['name'],
+                        'configuration-type-id': item['configuration-type-id'],
+                        'organization-id': item['organization-id'],
+                        'configuration-status-id': item['configuration-status-id'],
+                        'location-id': item['location-id'],
+                        'contact-id': item['contact-id'],
+                        'manufacturer-id': item['manufacturer-id'],
+                        'model-id': item['model-id'],
+                        'operating-system-id': item['operating-system-id'],
+                        'operating-system-notes': item['operating-system-notes'],
+                        'notes': item['notes'],
+                        'hostname': item['hostname'],
+                        'primary-ip': item['primary-ip'],
+                        'mac-address': item['mac-address'],
+                        'default-gateway': item['default-gateway'],
+                        'serial-number': item['serial-number'],
+                        'asset-tag': item['asset-tag'],
+                        'position': item['position'],
+                        'installed-by': item['installed-by'],
+                        'purchased-by': item['purchased-by'],
+                        'purchased-at': item['purchased-at'],
+                        'warranty-expires-at': item['warranty-expires-at'],
+                        'installed-at': item['installed-at']}}
+                for y in dict(configuration['attributes']):
+                    if configuration['attributes'][y] is None:
+                        configuration['attributes'].pop(y)
 
                 if config_interface_items != []:
-                    configuration["relationships"] = {"configuration_interfaces": {"data": config_interface_items}}
-                #config_items.append(configuration)
-                data = {"data": configuration}
-                self.postRequest(urlDict['Configuration'], data)
+                    configuration['relationships'] = {
+                                        'configuration_interfaces': {
+                                            'data': config_interface_items}}
+                # config_items.append(configuration)
+                data = {'data': configuration}
+                self.common_post_request(urlDict['Configuration'], data)
 
     class FlexibleAsset:
-        def __init__(self, loadData, append, convertToID, patchRequest,
+        def __init__(self, common_load_data, common_merge_data,
+                     common_convert_to_id, common_patch_request,
                      common_print, common_select_next, common_clear,
                      common_print_all, common_append_data, common_search):
             self.self = self
             self.rawdata = {'data': [], 'included': []}
             self.counter = 0
-            self.loadData = loadData
-            self.append = append
-            self.convertToID = convertToID
+            self.common_load_data = common_load_data
+            self.common_merge_data = common_merge_data
+            self.common_convert_to_id = common_convert_to_id
             self.updates = []
-            self.patchRequest = patchRequest
+            self.common_patch_request = common_patch_request
             self.common_print = common_print
             self.common_select_next = common_select_next
             self.common_clear = common_clear
             self.common_print_all = common_print_all
             self.common_append_data = common_append_data
+            self.common_search = common_search
 
         def appendData(self, newdata):
             seld.common_append_data(self, newdata)
@@ -766,9 +819,6 @@ class pytglue:
                 'id', 'name', 'type', 'resource-url', 'restricted', 'my-glue',
                 'flexible-asset-type-id', 'flexible-asset-type-name',
                 'created-at', 'updated-at']
-
-            # There is no canconvert list because the only item that can be converted is the
-            # Organization Name
             self.update = {}
             update = False
             try:
@@ -777,13 +827,17 @@ class pytglue:
                         if self.item[x] != self.control[x]:
                             update = True
                             if x == 'organization-name':
-                                organization_id = self.convertToID('org', self.item[x])
+                                organization_id = self.common_convert_to_id(
+                                                    'org', self.item[x])
                                 self.update['organization-id'] = organization_id
                             elif isinstance(self.control[x], dict):
                                 if isinstance(self.item[x], list):
                                     self.update[x] = self.item[x]
                                 else:
-                                    error = ("Tagged Items in Flexible Assets must be updated as a list of ITGlue IDs")
+                                    error = (
+                                     """Tagged Items in Flexible Assets\
+                                        must be updated as a list of\
+                                        ITGlue IDs.""")
                                     raise RuntimeError(error)
                             else:
                                 self.update[x] = self.item[x]
@@ -812,47 +866,54 @@ class pytglue:
                 self.update.pop('organization-name')
                 self.updates.append(self.update)
 
-            self.item = self.loadData(self.rawdata['data'][self.counter], self.rawdata)
+            self.item = self.common_load_data(
+                                            self.rawdata['data'][self.counter],
+                                            self.rawdata)
             self.control = dict(self.item)
 
         def Update(self):
             url = urlDict['Flexible Asset']
             self.Select()
-            update = {"data": []}
+            update = {'data': []}
             for x in self.updates:
                 updatequeue = {
-                    "type": x.pop("type"), "attributes": {"id": x.pop("id"),
-                    "organization-id": x.pop("organization-id"), "traits": {}}}
+                    'type': x.pop('type'),
+                    'attributes': {'id': x.pop('id'),
+                                   'organization-id': x.pop('organization-id'),
+                                   'traits': {}}}
                 for y in x:
-                    updatequeue["attributes"]["traits"][y] = x[y]
+                    updatequeue['attributes']['traits'][y] = x[y]
                 if len(self.updates) == 1:
-                    id = updatequeue["attributes"].pop("id")
-                    url = url+"/"+id
-                    update["data"] = updatequeue
+                    id = updatequeue['attributes'].pop('id')
+                    url = url+'/'+id
+                    update['data'] = updatequeue
                 else:
-                    update["data"].append(updatequeue)
+                    update['data'].append(updatequeue)
             self.updatetest = update
             self.updates = []
 
-            self.patchRequest(url, update)
-# There is something wrong with the Contacts query with org ids. the query gives
-# 'filter[organization_id]=' but it needs to be 'organization_id=' for contacts
+            self.common_patch_request(url, update)
+
+# There is something wrong with the Contacts query with org ids.
+# It queries with 'filter[organization_id]=' but it needs
+# to be 'organization_id=' for contacts.
 
     class Contacts:
-        def __init__(self, loadData, append, convertToID, patchRequest,
-                     format_update, common_print, common_select_next,
+        def __init__(self, common_load_data, common_merge_data,
+                     common_convert_to_id, common_patch_request,
+                     common_format_update, common_print, common_select_next,
                      common_clear, common_print_all, common_append_data,
                      common_search, common_select):
 
             self.self = self
             self.rawdata = {'data': [], 'included': []}
             self.counter = 0
-            self.loadData = loadData
-            self.append = append
-            self.convertToID = convertToID
+            self.common_load_data = common_load_data
+            self.common_merge_data = common_merge_data
+            self.common_convert_to_id = common_convert_to_id
             self.updates = []
-            self.patchRequest = patchRequest
-            self.format_update = format_update
+            self.common_patch_request = common_patch_request
+            self.common_format_update = common_format_update
             self.common_print = common_print
             self.common_select_next = common_select_next
             self.common_clear = common_clear
@@ -891,27 +952,28 @@ class pytglue:
             self.common_select(self, editable, canconvert)
 
     class Organizations:
-        def __init__(self, loadData, append, convertToID, patchRequest,
-                     format_update, common_print, common_select_next,
+        def __init__(self, common_load_data, common_merge_data,
+                     common_convert_to_id, common_patch_request,
+                     common_format_update, common_print, common_select_next,
                      common_clear, common_print_all, common_append_data,
                      common_search, common_select):
 
             self.self = self
             self.rawdata = {'data': [], 'included': []}
             self.counter = 0
-            self.loadData = loadData
-            self.append = append
-            self.convertToID = convertToID
+            self.common_load_data = common_load_data
+            self.common_merge_data = common_merge_data
+            self.common_convert_to_id = common_convert_to_id
             self.updates = []
-            self.patchRequest = patchRequest
-            self.format_update = format_update
+            self.common_patch_request = common_patch_request
+            self.common_format_update = common_format_update
             self.common_print = common_print
             self.common_select_next = common_select_next
             self.common_clear = common_clear
             self.common_print_all = common_print_all
             self.common_append_data = common_append_data
             self.common_search = common_search
-            self.common_select = common_search
+            self.common_select = common_select
 
         def appendData(self, newdata):
             self.common_append_data(self, newdata)
