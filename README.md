@@ -10,6 +10,7 @@ Requests
 ## Installation:
 ```
 pip install pytglue
+from pytglue import pytglue
 ```
 
 ## Usage:
