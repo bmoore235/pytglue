@@ -61,7 +61,7 @@ All Include values are boolian and IT Glue will only recognize one.
 
 Acceptable values for filtering are: 
 ##### Configurations 
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>id</sub>
 * <sub>name</sub>
 * <sub>org (Can be the ID or exact name of an Organization)</sub>
@@ -72,7 +72,7 @@ Acceptable values for filtering are:
 * <sub>rmmID</sub>
 * <sub>rmm</sub>
 
-<sub>Include</sub>
+<sub>**Include**</sub>
 * <sub>interfaces</sub>
 * <sub>rmmRecord</sub>
 * <sub>password</sub>
@@ -82,16 +82,16 @@ Acceptable values for filtering are:
 * <sub>location</sub>
   
 ##### Flexible Assets
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>FlexibleAssetType (Can be the ID or exact name of the Flexible Asset Type)</sub>
 * <sub>name</sub>
 * <sub>org (Can be the ID or exact name of an Organization)</sub>
 
-<sub>Include</sub>
+<sub>**Include**</sub>
 * <sub>password</sub>
 
 ##### Organizations
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>id</sub>
 * <sub>name</sub>
 * <sub>orgType (Can be the ID or the exact name of the Organization Type)</sub>
@@ -104,7 +104,7 @@ Acceptable values for filtering are:
 * <sub>excludeOrgStatus (Can be the ID or the exact name of the Organization Status)</sub>
 
 ##### Contacts
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>org (Can be the ID or exact name of an Organization)</sub>
 * <sub>firstName</sub>
 * <sub>lastName</sub>
@@ -113,7 +113,8 @@ Acceptable values for filtering are:
 * <sub>firstName</sub>
 * <sub>important</sub>
 * <sub>primaryEmail</sub>
-<sub>Include</sub>
+
+<sub>**Include**</sub>
 * <sub>location</sub>
 * <sub>password</sub>
 
