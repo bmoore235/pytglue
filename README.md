@@ -53,7 +53,7 @@ Pytglue can query the following items:
 * <sub>Organizations<sub>
 * <sub>Contacts</sub>
 
-Argument must be one 'Configurations', 'Flexible Assets', 'Organizations', 'Contacts'
+Argument must be one of 'Configurations', 'Flexible Assets', 'Organizations', 'Contacts'
 ```
 Pytglue.Query('Configurations')
 ```
