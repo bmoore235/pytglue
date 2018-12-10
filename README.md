@@ -10,10 +10,13 @@ Requests
 ## Installation:
 ```
 pip install pytglue
-from pytglue import pytglue
 ```
 
 ## Usage:
+
+```
+from pytglue import pytglue
+```
 
 ### Connecting to ITGlue:
 An API key is required from ITGlue to connect. 
