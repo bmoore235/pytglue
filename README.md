@@ -7,6 +7,11 @@ data while using the API if you are not careful.
 ## Requirements: 
 Requests
 
+## Installation:
+```
+pip install pytglue
+```
+
 ## Usage:
 
 ### Connecting to ITGlue:
