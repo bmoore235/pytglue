@@ -2,7 +2,7 @@
 Unofficial Python Wrapper for IT Glue. 
 
 It goes without saying, but you are responsible for your own environment. It is possible to cause major issues with your 
-data while using the API if you are not careful. 
+ITGlue data while using the API if you are not careful. 
 
 ## Requirements: 
 Requests
