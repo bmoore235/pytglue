@@ -2,12 +2,21 @@
 Unofficial Python Wrapper for IT Glue. 
 
 It goes without saying, but you are responsible for your own environment. It is possible to cause major issues with your 
-data while using the API if you are not careful. 
+ITGlue data while using the API if you are not careful. 
 
 ## Requirements: 
 Requests
 
+## Installation:
+```
+pip install pytglue
+```
+
 ## Usage:
+
+```
+from pytglue import pytglue
+```
 
 ### Connecting to ITGlue:
 An API key is required from ITGlue to connect. 
@@ -44,7 +53,7 @@ Pytglue can query the following items:
 * <sub>Organizations<sub>
 * <sub>Contacts</sub>
 
-Argument must be one 'Configurations', 'Flexible Assets', 'Organizations', 'Contacts'
+Argument must be one of 'Configurations', 'Flexible Assets', 'Organizations', 'Contacts'
 ```
 Pytglue.Query('Configurations')
 ```
@@ -56,7 +65,7 @@ All Include values are boolian and IT Glue will only recognize one.
 
 Acceptable values for filtering are: 
 ##### Configurations 
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>id</sub>
 * <sub>name</sub>
 * <sub>org (Can be the ID or exact name of an Organization)</sub>
@@ -67,7 +76,7 @@ Acceptable values for filtering are:
 * <sub>rmmID</sub>
 * <sub>rmm</sub>
 
-<sub>Include</sub>
+<sub>**Include**</sub>
 * <sub>interfaces</sub>
 * <sub>rmmRecord</sub>
 * <sub>password</sub>
@@ -77,16 +86,16 @@ Acceptable values for filtering are:
 * <sub>location</sub>
   
 ##### Flexible Assets
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>FlexibleAssetType (Can be the ID or exact name of the Flexible Asset Type)</sub>
 * <sub>name</sub>
 * <sub>org (Can be the ID or exact name of an Organization)</sub>
 
-<sub>Include</sub>
+<sub>**Include**</sub>
 * <sub>password</sub>
 
 ##### Organizations
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>id</sub>
 * <sub>name</sub>
 * <sub>orgType (Can be the ID or the exact name of the Organization Type)</sub>
@@ -99,7 +108,7 @@ Acceptable values for filtering are:
 * <sub>excludeOrgStatus (Can be the ID or the exact name of the Organization Status)</sub>
 
 ##### Contacts
-<sub>Filter</sub>
+<sub>**Filter**</sub>
 * <sub>org (Can be the ID or exact name of an Organization)</sub>
 * <sub>firstName</sub>
 * <sub>lastName</sub>
@@ -108,7 +117,8 @@ Acceptable values for filtering are:
 * <sub>firstName</sub>
 * <sub>important</sub>
 * <sub>primaryEmail</sub>
-<sub>Include</sub>
+
+<sub>**Include**</sub>
 * <sub>location</sub>
 * <sub>password</sub>
 
