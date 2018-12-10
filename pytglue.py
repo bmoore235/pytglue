@@ -35,8 +35,8 @@ filterDict = {
     'id': 'filter[id]=',
     'name': 'filter[name]=',
     'org': 'filter[organization_id]=',
-    'ConfigType': 'filter[configuration_type_id]=',
-    'ConfigStatus': 'filter[configuration_status_id]=',
+    'configType': 'filter[configuration_type_id]=',
+    'configStatus': 'filter[configuration_status_id]=',
     'contactID': 'filter[contact_id]=',
     'serial': 'filter[serial_number]=',
     'rmmID': 'filter[rmm_id]=',
@@ -201,12 +201,12 @@ class pytglue:
         if self.query_type == 'Configurations':
             self.query = ''
             self.FilterList = [
-                'id', 'name', 'org', 'ConfigType', 'ConfigStatus', 'contactID',
+                'id', 'name', 'org', 'configType', 'configStatus', 'contactID',
                 'serial', 'rmmID', 'rmm']
             self.IncludeList = [
                 'interfaces', 'rmmRecord', 'password', 'attachments',
                 'relatedItems', 'updated', 'location']
-            self.canConvert = ['org', 'ConfigType', 'ConfigStatus']
+            self.canConvert = ['org', 'configType', 'configStatus']
 
         if self.query_type == 'Flexible Assets':
             self.query = ''
@@ -271,7 +271,8 @@ class pytglue:
                              + ', value for Included items must be Boolian.')
                     raise RuntimeError(error)
 
-            self.query = self.common_make_query(self.query, final=True)
+            self.query = self.common_make_query(
+                                    self.query, 'page-size', 1000, final=True)
 
     def common_make_query(
             self, query, param=None, param_value=None, final=False):
@@ -349,8 +350,8 @@ class pytglue:
 
     def common_convert_to_id(self, key, value):
         organization_aliases = ['org', 'organization-name']
-        ConfigType_aliases = ['ConfigType', 'configuration-type-name']
-        ConfigStatus_aliases = ['ConfigStatus', 'configuration-status-name']
+        configType_aliases = ['configType', 'configuration-type-name']
+        configStatus_aliases = ['configStatus', 'configuration-status-name']
         FlexibleAssetType_aliases = ['FlexibleAssetType']
         orgType_aliases = ['orgType', 'excludeOrgType']
         orgStatus_aliases = ['orgStatus', 'excludeOrgStatus']
@@ -359,9 +360,9 @@ class pytglue:
         try:
             if key in organization_aliases:
                 value = int(self.idlist['organizations'][value])
-            elif key in ConfigType_aliases:
+            elif key in configType_aliases:
                 value = int(self.idlist['configuration_types'][value])
-            elif key in ConfigStatus_aliases:
+            elif key in configStatus_aliases:
                 value = int(self.idlist['configuration_statuses'][value])
             elif key in FlexibleAssetType_aliases:
                 value = int(self.idlist['flexible_asset_types'][value])
@@ -540,7 +541,8 @@ class pytglue:
                 else:
                     end = subclass.SelectNext()
             if end is True:
-                print('No Value Found')
+                error = str(value) + " was not found in " + key
+                raise RuntimeError(error)
 
     def common_select(self, subclass, editable, canconvert):
         changes = {}
@@ -581,7 +583,7 @@ class pytglue:
     class Create:
         def __init__(
                 self, subclass, create_items, create_required, create_convert,
-                common_convert_to_id, Post):
+                common_convert_to_id, Post, Print, PrintAll):
             self.self = subclass
             self.new_create = create_items
             self.item = dict(self.new_create)
@@ -590,6 +592,8 @@ class pytglue:
             self.create_convert = create_convert
             self.common_convert_to_id = common_convert_to_id
             self.Post = Post
+            self.Print = Print
+            self.PrintAll = PrintAll
 
         def Next(self):
             self.requirement_check()
@@ -664,7 +668,7 @@ class pytglue:
 
             self.Create = Create(
                 self, create_items, create_required, create_convert,
-                self.common_convert_to_id, self.Post)
+                self.common_convert_to_id, self.Post, self.Print, self.PrintAll)
 
         def appendData(self, newdata):
             self.common_append_data(self, newdata)
