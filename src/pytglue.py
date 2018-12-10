@@ -251,7 +251,7 @@ class pytglue:
                     break
                 else:
                     self.filter_by_id = False
-                    value = include[key]
+                    value = filter[key]
                     if isinstance(value, str):
                         try:
                             value = int(value)
@@ -262,7 +262,7 @@ class pytglue:
                                                         self.query, key, value)
 
             for key in include:
-                value = filter[key]
+                value = include[key]
                 if isinstance(value, bool):
                     self.query = self.common_make_query(self.query, key, value)
                 else:
