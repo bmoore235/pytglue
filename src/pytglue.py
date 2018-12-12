@@ -802,7 +802,7 @@ class pytglue:
             self.common_search = common_search
 
         def appendData(self, newdata):
-            seld.common_append_data(self, newdata)
+            self.common_append_data(self, newdata)
 
         def Clear(self):
             self.common_clear(self)

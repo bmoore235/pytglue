@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='pytglue',
-    version='1.0.1',
+    version='1.0.2',
     description='An Unofficial Python Wrapper for ITGlue.',
     py_modules=["pytglue"],
     package_dir={'': 'src'},
