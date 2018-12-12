@@ -1,6 +1,9 @@
 # pytglue
 Unofficial Python Wrapper for IT Glue. 
 
+**There are far more bugs in this than I thought. I need to do a better job of testing, and would not reccomend 
+using this until that is completed.**
+
 It goes without saying, but you are responsible for your own environment. It is possible to cause major issues with your 
 ITGlue data while using the API if you are not careful. 
 
