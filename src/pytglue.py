@@ -689,7 +689,8 @@ class pytglue:
             self.common_search(self, **kwargs)
 
         def SelectNext(self):
-            self.common_select_next(self)
+            end = self.common_select_next(self)
+            return end
 
         def Select(self):
             editable = [
@@ -816,7 +817,8 @@ class pytglue:
             self.common_search(self, **kwargs)
 
         def SelectNext(self):
-            self.common_select_next(self)
+            end = self.common_select_next(self)
+            return end
 
         def Select(self):
             noneditable = [
@@ -942,7 +944,8 @@ class pytglue:
             self.common_search(self, **kwargs)
 
         def SelectNext(self):
-            self.common_select_next(self)
+            end = self.common_select_next(self)
+            return end
 
         # Need to add support for editing email/phone numbers
         def Select(self):
@@ -995,7 +998,8 @@ class pytglue:
             self.common_search(self, **kwargs)
 
         def SelectNext(self):
-            self.common_select_next(self)
+            end = self.common_select_next(self)
+            return end
 
         def Select(self):
             editable = [
